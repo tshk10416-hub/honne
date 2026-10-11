@@ -58,52 +58,91 @@
       </div>
 
       <div class="card rules">
-        <p class="card-title">遊び方（2分間）</p>
+        <p class="card-title">遊び方（ターン制）</p>
         <ol class="rules-list">
-          <li>あなたにだけ<strong>ターゲットワード</strong>が届きます。</li>
-          <li>雑談を装って、相手にその言葉を言わせたら <strong>SHOT</strong>（+1点）。言わせたら次のワードが届きます。</li>
-          <li>相手の狙いに気付いたら、ワードを口に出して宣言して <strong>COUNTER</strong>。当たれば+2点、はずれは−1点。</li>
+          <li><strong>先攻・後攻</strong>で交代します（順番はランダム）。1ターンは<strong id="rules-turn-sec">90</strong>秒です。</li>
+          <li>攻撃ターンの人にだけ、相手に言わせる<strong>ワード</strong>と<strong>質問例</strong>が届きます。ワードは相手のアンケート回答から選ばれます。</li>
+          <li>質問して、相手にワードを言わせたら <strong>SHOT</strong>（+1点）。次のワードへ進みます。難しいワードは<strong>パス</strong>できます。</li>
+          <li>守りの人は、質問に<strong>自然に答えます</strong>。わざとワードを避けるのはなしです。</li>
+          <li>言わせたワードの数が多いほうの勝ちです。</li>
         </ol>
       </div>
     </section>
 
-    <!-- S11 対戦 -->
+    <!-- ターンの準備（先攻・後攻の交代） -->
+    <section id="view-turn" class="screen screen-center" hidden>
+      <span class="turn-step" id="turn-step">先攻</span>
+      <div class="big-emoji" id="turn-emoji" aria-hidden="true">⚔️</div>
+      <h1 class="title" id="turn-title">あなたの攻撃ターン</h1>
+      <p class="muted turn-desc" id="turn-desc"></p>
+
+      <div class="turn-score card" id="turn-score"></div>
+
+      <button type="button" class="btn btn-primary btn-block btn-big" id="turn-start" hidden>スタート</button>
+      <div class="waiting" id="turn-wait" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="turn-wait-text">相手がスタートするのを待っています</span>
+      </div>
+    </section>
+
+    <!-- S11 対戦（攻撃ターン／守りターン） -->
     <section id="view-playing" class="screen" hidden>
       <div class="scorebar card">
         <div class="score-side" id="score-me"></div>
         <div class="timer">
-          <div class="timer-text" id="timer-text">2:00</div>
+          <div class="timer-text" id="timer-text">1:30</div>
           <div class="progress timer-progress" aria-hidden="true"><div id="timer-bar" class="progress-bar"></div></div>
         </div>
         <div class="score-side score-side-right" id="score-opp"></div>
       </div>
 
-      <div class="word-card" id="word-card">
-        <div class="word-head">
-          <span class="word-label">あなたのターゲットワード</span>
-          <span class="word-no" id="word-no">1つ目</span>
+      <div class="turn-banner" id="turn-banner"></div>
+
+      <!-- 攻撃ターン -->
+      <div id="attack-panel" class="panel-stack" hidden>
+        <div class="word-card" id="word-card">
+          <div class="word-head">
+            <span class="word-label">相手に言わせるワード</span>
+            <span class="word-no" id="word-no">1つ目</span>
+          </div>
+          <button type="button" class="word-reveal" id="word-toggle" aria-pressed="false">
+            <span class="word-text" id="word-text">……</span>
+            <span class="word-cover" id="word-cover">👀 タップして確認<br><small>相手に見られないように</small></span>
+          </button>
+          <div class="word-hint" id="word-hint" hidden>
+            <p class="word-hint-title">💡 こう聞いてみよう</p>
+            <ul class="question-list" id="word-questions"></ul>
+            <p class="word-hint-answer" id="word-hint-answer"></p>
+          </div>
+          <p class="word-hint-closed" id="word-hint-closed">ワードを確認すると、質問例も見られます</p>
         </div>
-        <button type="button" class="word-reveal" id="word-toggle" aria-pressed="false">
-          <span class="word-text" id="word-text">……</span>
-          <span class="word-cover" id="word-cover">👀 タップして確認<br><small>相手に見られないように</small></span>
-        </button>
-        <p class="word-hint">話題のヒント：<span id="word-hint"></span></p>
+
+        <div class="action-buttons">
+          <button type="button" class="btn-action btn-shot" id="btn-shot">
+            <span class="btn-action-main">🎯 言わせた！</span>
+            <span class="btn-action-sub">SHOT +1</span>
+          </button>
+          <button type="button" class="btn-action btn-pass" id="btn-pass">
+            <span class="btn-action-main">⏭ パス</span>
+            <span class="btn-action-sub">次のワードへ（0点）</span>
+          </button>
+        </div>
+        <p class="rule-note">「家にいた」「出かけた」のように、ワードが入っていれば言い方が変わってもOKです。</p>
       </div>
 
-      <div class="action-buttons">
-        <button type="button" class="btn-action btn-shot" id="btn-shot">
-          <span class="btn-action-main">🎯 言わせた！</span>
-          <span class="btn-action-sub">SHOT +1</span>
-        </button>
-        <button type="button" class="btn-action btn-counter" id="btn-counter">
-          <span class="btn-action-main">🛡️ 見破った！</span>
-          <span class="btn-action-sub">COUNTER（宣言してから）</span>
-        </button>
+      <!-- 守りターン：質問に答えるだけ -->
+      <div id="defend-panel" class="panel-stack" hidden>
+        <div class="card defend-card">
+          <div class="big-emoji" aria-hidden="true">💬</div>
+          <p class="card-title" id="defend-title">質問に答えよう</p>
+          <p class="muted" id="defend-desc"></p>
+          <p class="defend-count" id="defend-count"></p>
+        </div>
       </div>
 
       <p class="section-label">ログ</p>
       <ul class="log-list" id="log-list">
-        <li class="log-empty">まだ動きはありません。さりげなく話しかけてみよう</li>
+        <li class="log-empty">まだ動きはありません</li>
       </ul>
     </section>
 
@@ -118,10 +157,10 @@
         <div class="result-score" id="result-score"></div>
       </div>
 
-      <p class="section-label">あなたのワード</p>
+      <p class="section-label">あなたが狙ったワード</p>
       <ul class="word-list" id="result-my-words"></ul>
 
-      <p class="section-label" id="result-opp-label">相手のワード</p>
+      <p class="section-label" id="result-opp-label">相手が狙ったワード</p>
       <ul class="word-list" id="result-opp-words"></ul>
 
       <div class="card talk-card">
@@ -139,7 +178,7 @@
     <!-- キャンセル -->
     <section id="view-cancelled" class="screen screen-center" hidden>
       <div class="big-emoji" aria-hidden="true">🍃</div>
-      <h1 class="title">対戦はキャンセルされました</h1>
+      <h1 class="title" id="cancelled-title">対戦はキャンセルされました</h1>
       <p class="muted">また話したくなったら、カードをタッチしてね。</p>
       <div class="btn-row" style="width:100%">
         <a class="btn" href="lobby.html">ホームへ</a>
@@ -153,7 +192,7 @@
   <div class="modal" id="modal-shot" hidden>
     <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-shot-title">
       <h2 class="subtitle" id="modal-shot-title">相手が「<span id="modal-shot-word"></span>」と言った？</h2>
-      <p class="muted">自己申告です。結果画面でワードは相手にも公開されます。</p>
+      <p class="muted">ワードが入っていれば、言い方が変わってもOKです。自己申告で、結果画面でワードは相手にも公開されます。</p>
       <div class="btn-row">
         <button type="button" class="btn" data-close>まだ</button>
         <button type="button" class="btn btn-primary" id="modal-shot-yes">言った！</button>
@@ -161,32 +200,9 @@
     </div>
   </div>
 
-  <!-- 相手の COUNTER を判定 -->
-  <div class="modal" id="modal-judge" hidden>
-    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-judge-title">
-      <div class="big-emoji" aria-hidden="true">🛡️</div>
-      <h2 class="subtitle" id="modal-judge-title"><span id="modal-judge-name"></span>さんが「見破った！」と宣言</h2>
-      <p class="muted">宣言された言葉は、あなたの今のワード「<strong id="modal-judge-word"></strong>」でしたか？</p>
-      <div class="btn-row">
-        <button type="button" class="btn" id="modal-judge-miss">はずれ</button>
-        <button type="button" class="btn btn-primary" id="modal-judge-hit">当たり…</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 自分の COUNTER の判定待ち -->
-  <div class="modal" id="modal-counter-wait" hidden>
-    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-wait-title">
-      <div class="spinner" aria-hidden="true" style="margin:0 auto"></div>
-      <h2 class="subtitle" id="modal-wait-title">相手の判定を待っています</h2>
-      <p class="muted">相手のスマホで「当たり／はずれ」を選んでもらってください。</p>
-      <button type="button" class="btn btn-ghost btn-block" id="modal-counter-cancel">宣言を取り消す</button>
-    </div>
-  </div>
-
-  <!-- 開始の合図 -->
+  <!-- ターン開始の合図 -->
   <div class="start-overlay" id="start-overlay" hidden>
-    <div class="start-text">START!</div>
+    <div class="start-text" id="start-text">START!</div>
   </div>
 
   <script type="module" src="js/sniper.js"></script>

@@ -34,7 +34,7 @@
 | S02 | 事前アンケート | Q1〜Q5 を1問ずつタップ回答。各問「スキップ」可 |
 | S03 | 待機画面（ホーム） | 自分のプロフィール、回答状況、「相手のカードをタッチ」「親カードをタッチ」の案内 |
 | S10 | 1対1 マッチング | 相手の承認待ち・両者そろったら開始 |
-| S11 | ワード・スナイパー 対戦 | 自分だけのターゲットワード、残り時間、SHOT / COUNTER ボタン |
+| S11 | ワード・スナイパー 対戦（ターン制） | 攻撃ターン：ワード・質問例・残り時間、SHOT／パス ボタン。守りターン：「自然に答えよう」の案内と、言わされた数 |
 | S12 | 1対1 結果 | 両者のワード公開、勝敗、エピソードトークのきっかけ |
 | S20 | ルームロビー | 参加者一覧（3〜6名）、ホストがモードを選択 |
 | S30 | プロファイル・ベット ターン待ち | 次の主役の案内「親カードをタッチしてターン開始」 |
@@ -98,12 +98,13 @@ flowchart TD
 flowchart TD
     A([Aの端末でBの個人カードをタッチ]) --> S10A[S10 Aの画面: Bの承認待ち]
     S10A -->|duels 作成 status=waiting| S10B[Bの画面に招待が届く]
-    S10B -->|Bが「受ける」| ASSIGN[ターゲットワード割当<br/>相手のアンケート回答から抽出<br/>未回答ならプリセットのトークテーマ]
+    S10B -->|Bが「受ける」| READY[ターンの準備<br/>先攻・後攻はランダム]
     S10B -->|Bが「断る」| S03[S03 待機画面]
-    ASSIGN --> S11[S11 対戦 120秒<br/>自分のワードだけ表示]
-    S11 -->|相手に言わせた → SHOT| S11
-    S11 -->|狙われたと気付いた → COUNTER| S11
-    S11 -->|時間切れ or 両者のワード消化| S12[S12 結果<br/>ワード公開と勝敗]
+    READY -->|攻撃する人がスタート| S11[S11 攻撃ターン 90秒<br/>攻撃側だけにワードと質問例<br/>相手のアンケート回答から抽出]
+    S11 -->|相手に言わせた → SHOT +1| S11
+    S11 -->|難しい → パス| S11
+    S11 -->|時間切れ・まだ後攻が残っている| READY
+    S11 -->|時間切れ・最後のターン| S12[S12 結果<br/>ワード公開と勝敗]
     S12 --> S03
 ```
 
@@ -161,7 +162,7 @@ erDiagram
     rounds ||--o{ answers : "アノニマス"
     rounds ||--o{ votes : "アノニマス"
     duels ||--|{ duelSecrets : "プレイヤー別"
-    duels ||--o{ duelEvents : "SHOT/COUNTER"
+    duels ||--o{ duelEvents : "SHOT/パス"
     surveyQuestions ||--o{ players : "回答対象"
     presetTopics ||--o{ rounds : "お題の供給元"
 ```
@@ -192,12 +193,12 @@ rooms/{roomId}
 | `text` | string | `"初デートの食事代"` |
 | `options` | map | `{ A: {...}, B: {...} }` |
 | `options.A.label` | string | `"完全割り勘"` |
-| `options.A.targetWords` | array\<string\> | `["割り勘", "ポイント", "コスパ"]` |
+| `options.A.targetWords` | array\<map\> | `[{ word: "割り勘", questions: ["友達とごはんに行ったら、お会計ってどうしてる？", …] }, …]` |
 | `options.B.label` | string | `"どちらかが多めに払う"` |
-| `options.B.targetWords` | array\<string\> | `["ごちそう", "記念日", "奢り"]` |
+| `options.B.targetWords` | array\<map\> | `[{ word: "おごる", questions: […] }, { word: "払う", questions: […] }]` |
 | `betPrompt` | string | `"〇〇さんは初デートの食事代、どっち派？"` |
 
-`targetWords` はワード・スナイパー用です。相手が選んだ選択肢に関連する言葉をターゲットにすることで、「相手が自然に口にしそうだが、狙わないと出てこない」難易度になります。仕様上は2択ですが、`options` を map にしているので将来 C を追加して3択にもできます。
+`targetWords` はワード・スナイパー用です。相手が選んだ**回答そのものの言葉**（その話題になれば本人が自然に口にする語）をターゲットにします。`questions` はそのワードを言わせるための質問例で、攻撃ターンにそのまま読み上げられる形にしています。守る側は質問に自然に答えるだけで、わざとワードを避けるのはなしです。仕様上は2択ですが、`options` を map にしているので将来 C を追加して3択にもできます。
 
 #### `presetTopics/{topicId}`（50問のフォールバック用お題プール）
 
@@ -206,7 +207,7 @@ rooms/{roomId}
 | `text` | string | お題本文 |
 | `type` | string | `"binary"`（2択）または `"talk"`（トークテーマ） |
 | `optionA` / `optionB` | string \| null | 2択の選択肢（`talk` は null） |
-| `targetWords` | array\<string\> | ワード・スナイパー用の候補語 |
+| `targetWords` | array\<map\> | ワード・スナイパー用の候補語と質問例 `{ word, questions }`（`talk` のみ。その話題になれば誰でも口にする語） |
 | `spicy` | number | きわどさ 1〜3。アノニマス・ターゲットは 2 以上から出題 |
 | `modes` | array\<string\> | 使えるモード `["sniper","bet","anonymous"]` |
 | `random` | number | 0〜1 の乱数。`where("random", ">=", r).limit(1)` でランダム抽選するため |
@@ -252,27 +253,33 @@ rooms/{roomId}
 | `status` | string | `"waiting"` → `"playing"` → `"finished"`。断ったときは `"cancelled"` |
 | `round` | number | 何戦目か（もう一戦で +1） |
 | `joined` | map | `{ uid: true/false }` 両方 true になった瞬間に `playing` へ |
-| `startedAt` | timestamp | 開始時刻（サーバー時刻）。残り時間は `startedAt + durationSec` で全員同じに計算 |
-| `durationSec` | number | `120` |
+| `startedAt` | timestamp | 2人がそろった時刻 |
+| `turnOrder` | array\<string\> | `[先攻のuid, 後攻のuid]`（ラウンドを作るときにランダムで決める） |
+| `turnIndex` | number | 今何ターン目か（0 始まり）。攻撃する人は `turnOrder[turnIndex % 2]` |
+| `turnPhase` | string | `"ready"`（攻撃する人のスタート待ち）→ `"active"`（攻撃中） |
+| `turnStartedAt` | timestamp \| null | ターンの開始時刻（サーバー時刻）。残り時間は `turnStartedAt + turnSec` で2台とも同じに計算 |
+| `turnSec` | number | `90` |
+| `totalTurns` | number | `2`（先攻・後攻1回ずつ） |
 | `scores` | map | `{ uidA: 0, uidB: 0 }` |
-| `counter` | map \| null | COUNTER 宣言中 `{ by, at }`。ワードの持ち主が当たり／はずれを判定すると null に戻る |
-| `history` | array\<map\> | `{ type, actor, owner, word, sourceLabel, at }`。type は `shot` / `countered` / `miss` / `left`（時間切れで残ったワード） |
-| `revealed` | map | `{ uid: true }` 終了時に残りワードを公開済みか |
+| `history` | array\<map\> | `{ type, actor, owner, turn, word, sourceLabel, at }`。type は `shot` / `pass` / `left`（時間切れで残ったワード） |
+| `revealed` | map | `{ t0: true, t1: true }` ターンが終わって、そのターンの残りワードを公開済みか |
 | `createdAt` / `updatedAt` | timestamp | |
 
 #### `duels/{id}/secrets/{playerId}`（本人しか読み書きできない）
 
 | フィールド | 型 | 説明 |
 |---|---|---|
-| `round` | number | どのラウンドのワードか |
-| `targetWord` | string | 今のターゲットワード |
-| `wordNo` | number | このラウンドで何個目のワードか |
+| `round` / `turn` | number | どのラウンドの何ターン目のワードか |
+| `targetWord` | string | 今のワード |
+| `questions` | array\<string\> | そのワードを言わせる質問例（攻撃中に表示） |
+| `wordNo` | number | このターンで何個目のワードか |
 | `used` | array\<string\> | このラウンドで使ったワード（重複を避ける） |
 | `source` / `sourceRef` | string | `"survey"` / `"q3.B"`、または `"preset"` / `"preset:t05"` |
 | `sourceLabel` | string | 結果画面に出す出どころ（例「相手のアンケート『休日の予定は？』の回答『外出・アクティブ』から」） |
-| `hintTheme` | string | 対戦中に出す話題のヒント |
+| `hintTheme` | string | 話題（アンケートの theme、またはトークテーマ） |
+| `hintAnswer` | string | 相手の回答（例「Aさんは『休日の予定は？』に『家から一歩も出ない』と回答」）。質問例の下に表示 |
 
-得点ルール：SHOT（自己申告）で +1 し、次のワードを引きます。COUNTER は口でワードを宣言してからボタンを押し、ワードの持ち主が「当たり」なら宣言者 +2（持ち主は次のワードへ）、「はずれ」なら宣言者 −1 です。ログは当初案の `events` サブコレクションをやめ、対戦ドキュメントの `history` にまとめました。
+得点ルール：先攻・後攻が交代で攻撃します。攻撃する人だけがワードを持ち、質問して相手に言わせたら SHOT（自己申告）で +1 し、次のワードを引きます。パスは 0 点で次のワードへ。守る人は質問に自然に答えるだけです（わざと避けるのはなし）。言わせたワードの数で勝敗を決めます。当初案の COUNTER（守る側がワードを見破る）は、ターン制では守る側が狙いを知っているため、質問を聞いた時点で言い当てられて攻撃が成り立たなくなるので、なくしました。ログは当初案の `events` サブコレクションをやめ、対戦ドキュメントの `history` にまとめました。
 
 ### 3.5 複数人モード
 
@@ -372,7 +379,7 @@ rooms/{roomId}
 
 | 場面 | 優先 | フォールバック |
 |---|---|---|
-| ワード・スナイパー | 相手の回答済みの問いからランダムに1問選び、その選択肢の `targetWords` から1語 | 相手が全問未回答なら `presetTopics`（type=talk）から抽選し、その `targetWords` から1語 |
+| ワード・スナイパー | 相手の回答済みの問いの選択肢の `targetWords` から1語（このラウンドでまだ出していない問いを優先） | 相手が全問未回答（または使い切った）なら `presetTopics`（type=talk）から抽選し、その `targetWords` から1語 |
 | プロファイル・ベット | 主役の回答済みの問いのうち、このルームで未出題のもの | 主役が未回答なら `presetTopics`（type=binary）から抽選し、S31 で主役が3秒で即決 |
 | アノニマス・ターゲット | `presetTopics`（modes に anonymous を含み spicy≥2）から未出題を抽選 | 全員がその場で回答するため不要 |
 

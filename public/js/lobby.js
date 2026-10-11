@@ -14,6 +14,7 @@ import {
 const params = new URLSearchParams(location.search);
 const HEARTBEAT_MS = 30 * 1000;
 const INVITE_TTL_MS = 10 * 60 * 1000;
+const PLAYING_TTL_MS = 10 * 60 * 1000;
 
 // ゲーム中の画面（ステップ4以降で実装）
 const MODE_PAGES = {
@@ -79,9 +80,9 @@ function renderDuels(duels) {
       if (d.status === 'waiting' && !d.joined?.[uid] && fresh) {
         return { d, opp, text: `${opp.nickname}さんから1対1の挑戦が届いています`, action: '見る' };
       }
-      if (d.status === 'playing') {
-        const end = toMillis(d.startedAt) + d.durationSec * 1000;
-        if (end > now) return { d, opp, text: `${opp.nickname}さんと対戦中です`, action: '戻る' };
+      // ターン制なので終わりの時刻は決まっていない。しばらく動きのない対戦は表示しない
+      if (d.status === 'playing' && d.turnOrder && now - toMillis(d.updatedAt) < PLAYING_TTL_MS) {
+        return { d, opp, text: `${opp.nickname}さんと対戦中です`, action: '戻る' };
       }
       return null;
     })
