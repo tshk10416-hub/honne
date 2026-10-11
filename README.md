@@ -2,7 +2,7 @@
 
 アプリ名は「HONNE（ホンネ）」です。
 
-## ファイル構成（ステップ2時点）
+## ファイル構成（ステップ3時点）
 
 ```
 honne/
@@ -13,18 +13,20 @@ honne/
     index.html           S00 エントリー（NFCタグのURLの受け口）
     profile.html         S01 ニックネーム登録 / S02 事前アンケート
     lobby.html           S03 待機画面（ホーム） / S20 ルームロビー
+    sniper.html          S10〜S12 1対1モード（ワード・スナイパー）
     css/common.css       共通スタイル
+    css/sniper.css       ワード・スナイパー専用スタイル
     js/firebase-config.js  Firebase の設定値（ここだけ書き換える）
     js/firebase.js       初期化と匿名ログイン、ローカルモード判定
     js/store.js          Firestore の読み書き（ローカルモード実装つき）
     js/survey.js         事前アンケート5問のマスター
     js/topics.js         お題の抽出ロジック（フォールバック込み）
     js/ui.js             画面共通の部品
-    js/index.js / profile.js / lobby.js   各画面のロジック
+    js/index.js / profile.js / lobby.js / sniper.js   各画面のロジック
     data/presets.json    プリセットお題50問
 ```
 
-`sniper.html`（ステップ3）、`bet.html`（ステップ4）、`anonymous.html` はまだありません。
+`bet.html`（ステップ4）と `anonymous.html` はまだありません。
 
 ## まず1台で試す（ローカルモード）
 
@@ -36,7 +38,19 @@ python3 -m http.server 8000
 # ブラウザで http://localhost:8000/index.html?local=1
 ```
 
-`firebase-config.js` が初期値のままなら、`?local=1` を付けなくても自動でローカルモードになります。ホーム画面の「ローカルモードの試遊」ボタンでカードのタッチを再現できます。ルームロビーでは「テスト用メンバーを追加」で3人以上にできます。
+`firebase-config.js` が初期値のままなら、`?local=1` を付けなくても自動でローカルモードになります。ホーム画面の「ローカルモードの試遊」ボタンでカードのタッチを再現できます。「テスト相手と1対1で遊ぶ」では、自動で動くテスト相手とワード・スナイパーを試せます。ルームロビーでは「テスト用メンバーを追加」で3人以上にできます。
+
+## Firebase エミュレータで複数人を試す
+
+Firebase プロジェクトを作らなくても、手元のエミュレータで本番と同じ動き（複数端末の同期、セキュリティルール）を確認できます。Java が必要です。
+
+```bash
+npm install -g firebase-tools
+firebase emulators:start --project demo-honne
+# ブラウザで http://localhost:5000/index.html?emulator=1
+```
+
+別のブラウザ（またはシークレットウィンドウ）でも同じURLを開くと、2人目のプレイヤーとして遊べます。
 
 ## Firebase で動かす
 

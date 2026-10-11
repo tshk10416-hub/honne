@@ -171,9 +171,8 @@ players/{playerId}
 cards/{cardId}
 surveyQuestions/{questionId}          ← マスター（Q1〜Q5）
 presetTopics/{topicId}                ← マスター（50問）
-duels/{duelId}
-  ├─ secrets/{playerId}
-  └─ events/{eventId}
+duels/{pair_uidA_uidB}
+  └─ secrets/{playerId}
 rooms/{roomId}
   ├─ members/{playerId}
   └─ rounds/{roundId}
@@ -242,40 +241,38 @@ rooms/{roomId}
 
 ### 3.4 1対1モード
 
-#### `duels/{duelId}`
+ステップ3の実装に合わせて更新しました。同じ2人の対戦は、ドキュメントIDを `pair_{小さい方のuid}_{大きい方のuid}` に固定しています。どちらが相手のカードをタッチしても同じ対戦に合流でき、「もう一戦」はラウンド番号を進めて同じドキュメントを使い直します。
+
+#### `duels/{pair_uidA_uidB}`
 
 | フィールド | 型 | 説明 |
 |---|---|---|
-| `playerIds` | array\<string\> | `[申込者, 相手]` |
+| `playerIds` | array\<string\> | 2人の uid（昇順） |
 | `players` | map | `{ uid: { nickname, color } }` 表示用のコピー |
-| `status` | string | `"waiting"` → `"playing"` → `"finished"` / `"declined"` |
+| `status` | string | `"waiting"` → `"playing"` → `"finished"`。断ったときは `"cancelled"` |
+| `round` | number | 何戦目か（もう一戦で +1） |
+| `joined` | map | `{ uid: true/false }` 両方 true になった瞬間に `playing` へ |
+| `startedAt` | timestamp | 開始時刻（サーバー時刻）。残り時間は `startedAt + durationSec` で全員同じに計算 |
 | `durationSec` | number | `120` |
-| `startedAt` / `endsAt` | timestamp | タイマー同期用 |
 | `scores` | map | `{ uidA: 0, uidB: 0 }` |
-| `wordStatus` | map | `{ uidA: "alive" \| "shot" \| "countered" }` 各自のワードの状態 |
-| `revealed` | map \| null | 終了時に両者のワードを公開用にコピー |
-| `createdAt` | timestamp | |
+| `counter` | map \| null | COUNTER 宣言中 `{ by, at }`。ワードの持ち主が当たり／はずれを判定すると null に戻る |
+| `history` | array\<map\> | `{ type, actor, owner, word, sourceLabel, at }`。type は `shot` / `countered` / `miss` / `left`（時間切れで残ったワード） |
+| `revealed` | map | `{ uid: true }` 終了時に残りワードを公開済みか |
+| `createdAt` / `updatedAt` | timestamp | |
 
-#### `duels/{duelId}/secrets/{playerId}`（本人しか読めない）
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `targetWord` | string | 自分が相手に言わせる言葉 |
-| `source` | string | `"survey"` または `"preset"` |
-| `sourceRef` | string | `"q3.B"` や `presetTopics/t012` |
-| `hintTheme` | string | 雑談の入り口になるテーマ（例 `"休日の過ごし方"`） |
-
-#### `duels/{duelId}/events/{eventId}`
+#### `duels/{id}/secrets/{playerId}`（本人しか読み書きできない）
 
 | フィールド | 型 | 説明 |
 |---|---|---|
-| `type` | string | `"SHOT"`（言わせた）または `"COUNTER"`（見破った） |
-| `by` | string | 押した人 |
-| `guess` | string \| null | COUNTER のとき入力した「相手の狙いワード」 |
-| `result` | string | `"hit"` / `"miss"` |
-| `at` | timestamp | |
+| `round` | number | どのラウンドのワードか |
+| `targetWord` | string | 今のターゲットワード |
+| `wordNo` | number | このラウンドで何個目のワードか |
+| `used` | array\<string\> | このラウンドで使ったワード（重複を避ける） |
+| `source` / `sourceRef` | string | `"survey"` / `"q3.B"`、または `"preset"` / `"preset:t05"` |
+| `sourceLabel` | string | 結果画面に出す出どころ（例「相手のアンケート『休日の予定は？』の回答『外出・アクティブ』から」） |
+| `hintTheme` | string | 対戦中に出す話題のヒント |
 
-得点ルール（案）：SHOT 成功で +1、COUNTER で相手のワードを言い当てたら +2 かつ相手のワードは無効、外したら −1。SHOT は自己申告ですが、結果画面でワードが公開されるので、その場の会話で検証されます。
+得点ルール：SHOT（自己申告）で +1 し、次のワードを引きます。COUNTER は口でワードを宣言してからボタンを押し、ワードの持ち主が「当たり」なら宣言者 +2（持ち主は次のワードへ）、「はずれ」なら宣言者 −1 です。ログは当初案の `events` サブコレクションをやめ、対戦ドキュメントの `history` にまとめました。
 
 ### 3.5 複数人モード
 
