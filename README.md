@@ -32,7 +32,7 @@ honne/
 
 https://tshk10416-hub.github.io/honne/
 
-main に変更が入ると、GitHub Actions（`.github/workflows/deploy-pages.yml`）が `public/` を `gh-pages` ブランチに公開します。Firebase の設定値を入れるまでは、1台で遊べるローカルモードで動きます。
+main に変更が入ると、GitHub Actions（`.github/workflows/deploy-pages.yml`）が `public/` を `gh-pages` ブランチに公開します。Firebase の設定値を入れるまでは、1台で遊べるローカルモードで動きます。設定手順は [docs/firebase-setup.md](docs/firebase-setup.md) にあります。
 
 ## まず1台で試す（ローカルモード）
 
