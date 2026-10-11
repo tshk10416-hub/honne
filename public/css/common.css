@@ -707,8 +707,8 @@ input {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  transform: translate(-50%, 20px);
+  top: calc(16px + env(safe-area-inset-top));
+  transform: translate(-50%, -20px);
   max-width: calc(100% - 32px);
   padding: 12px 18px;
   border-radius: 999px;

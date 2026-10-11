@@ -13,6 +13,7 @@ import {
 
 const params = new URLSearchParams(location.search);
 const HEARTBEAT_MS = 30 * 1000;
+const INVITE_TTL_MS = 10 * 60 * 1000;
 
 // ゲーム中の画面（ステップ4以降で実装）
 const MODE_PAGES = {
@@ -67,6 +68,34 @@ async function renderResume(player) {
   }
 }
 
+// 自分宛ての挑戦と、対戦中の1対1を表示
+function renderDuels(duels) {
+  const now = Date.now();
+  const items = duels
+    .map((d) => {
+      const oppId = d.playerIds.find((id) => id !== uid);
+      const opp = d.players?.[oppId] || { nickname: '相手' };
+      const fresh = now - toMillis(d.updatedAt) < INVITE_TTL_MS;
+      if (d.status === 'waiting' && !d.joined?.[uid] && fresh) {
+        return { d, opp, text: `${opp.nickname}さんから1対1の挑戦が届いています`, action: '見る' };
+      }
+      if (d.status === 'playing') {
+        const end = toMillis(d.startedAt) + d.durationSec * 1000;
+        if (end > now) return { d, opp, text: `${opp.nickname}さんと対戦中です`, action: '戻る' };
+      }
+      return null;
+    })
+    .filter(Boolean);
+  const list = $('#home-duels');
+  show(list, items.length > 0);
+  list.innerHTML = items.map(({ d, opp, text, action }) => `
+    <li class="member">
+      ${avatarHtml(opp, 'sm')}
+      <span class="member-name" style="white-space:normal">${escapeHtml(text)}</span>
+      <a class="btn btn-primary btn-small" href="sniper.html?duel=${encodeURIComponent(d.id)}">${action}</a>
+    </li>`).join('');
+}
+
 async function initHome() {
   showView('home');
   if (params.get('linked') === '1') {
@@ -96,6 +125,17 @@ async function initHome() {
     try {
       await store.releaseCard(player.cardId, uid);
       toast('カードの登録を解除しました');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    }
+  });
+
+  await store.watchIncomingDuels(uid, renderDuels);
+
+  $('#local-duel').addEventListener('click', async () => {
+    try {
+      const dummyId = await store.createDummyOpponent();
+      location.href = `sniper.html?opponent=${encodeURIComponent(dummyId)}`;
     } catch (err) {
       toast(errorMessage(err), 'error');
     }

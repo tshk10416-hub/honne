@@ -80,6 +80,80 @@ function deepMerge(target, src) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 1対1モード（ワード・スナイパー）の共通ロジック                        */
+/* ------------------------------------------------------------------ */
+export const DUEL_SECONDS = 120;
+
+// 書き込み時にサーバー時刻（ローカルモードでは端末時刻）へ置き換える目印
+export const SERVER_TIME = '__server_time__';
+
+// 同じ2人の対戦は常に同じドキュメントを使う（どちらがタッチしても合流できる）
+export function duelIdFor(a, b) {
+  return `pair_${[a, b].sort().join('_')}`;
+}
+
+function resolveTime(data, timeValue) {
+  const out = {};
+  Object.entries(data).forEach(([k, v]) => {
+    out[k] = v === SERVER_TIME ? timeValue : v;
+  });
+  return out;
+}
+
+// タッチしたときの対戦ドキュメントの変化を決める。
+// 終わった対戦なら新しいラウンドを作り、待機中なら自分を参加済みにして、2人そろえば開始する。
+function duelEnterPatch(duel, uid, opponentId, me, opponent) {
+  const ids = [uid, opponentId].sort();
+  const players = {
+    [uid]: { nickname: me.nickname, color: me.color },
+    [opponentId]: { nickname: opponent.nickname, color: opponent.color },
+  };
+  if (!duel || duel.status === 'finished' || duel.status === 'cancelled') {
+    return {
+      mode: 'set',
+      data: {
+        playerIds: ids,
+        players,
+        status: 'waiting',
+        round: (duel?.round || 0) + 1,
+        joined: { [uid]: true, [opponentId]: false },
+        startedAt: null,
+        durationSec: DUEL_SECONDS,
+        scores: { [uid]: 0, [opponentId]: 0 },
+        counter: null,
+        history: [],
+        revealed: {},
+        createdAt: duel?.createdAt || SERVER_TIME,
+        updatedAt: SERVER_TIME,
+      },
+    };
+  }
+  if (duel.status === 'waiting' && !duel.joined?.[uid]) {
+    const joined = { ...duel.joined, [uid]: true };
+    const ready = ids.every((id) => joined[id]);
+    return {
+      mode: 'update',
+      data: {
+        joined,
+        players,
+        ...(ready ? { status: 'playing', startedAt: SERVER_TIME } : {}),
+        updatedAt: SERVER_TIME,
+      },
+    };
+  }
+  return null;
+}
+
+function randomSurvey() {
+  const survey = {};
+  SURVEY.forEach((q) => {
+    const r = Math.random();
+    survey[q.id] = r < 0.4 ? 'A' : r < 0.8 ? 'B' : null;
+  });
+  return survey;
+}
+
+/* ------------------------------------------------------------------ */
 /* Firebase（Firestore）実装                                           */
 /* ------------------------------------------------------------------ */
 const firebaseStore = {
@@ -273,6 +347,72 @@ const firebaseStore = {
     });
   },
 
+  /* ---------- 1対1モード ---------- */
+
+  // 相手の個人カードをタッチしたとき（または挑戦を受けたとき）に呼ぶ。対戦IDを返す。
+  async enterDuel(uid, opponentId, me) {
+    const { db, fs } = await getFirebase();
+    const oppSnap = await fs.getDoc(fs.doc(db, 'players', opponentId));
+    if (!oppSnap.exists()) throw new GameError('PLAYER_NOT_FOUND');
+    const duelId = duelIdFor(uid, opponentId);
+    const ref = fs.doc(db, 'duels', duelId);
+    await fs.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const patch = duelEnterPatch(snap.exists() ? snap.data() : null, uid, opponentId, me, oppSnap.data());
+      if (!patch) return;
+      const data = resolveTime(patch.data, fs.serverTimestamp());
+      if (patch.mode === 'set') tx.set(ref, data);
+      else tx.update(ref, data);
+    });
+    return duelId;
+  },
+
+  async watchDuel(duelId, cb) {
+    const { db, fs } = await getFirebase();
+    return fs.onSnapshot(fs.doc(db, 'duels', duelId), (snap) => {
+      cb(snap.exists() ? { id: duelId, ...snap.data({ serverTimestamps: 'estimate' }) } : null);
+    }, (err) => cb(null, err));
+  },
+
+  // fn(現在の対戦) が返した差分をトランザクションで書き込む（null なら何もしない）
+  async updateDuel(duelId, fn) {
+    const { db, fs } = await getFirebase();
+    const ref = fs.doc(db, 'duels', duelId);
+    return fs.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw new GameError('DUEL_NOT_FOUND');
+      const patch = fn({ id: duelId, ...snap.data() });
+      if (!patch) return false;
+      tx.update(ref, resolveTime({ ...patch, updatedAt: SERVER_TIME }, fs.serverTimestamp()));
+      return true;
+    });
+  },
+
+  // 自分宛ての挑戦（相手が自分のカードをタッチして待っている対戦）を監視
+  async watchIncomingDuels(uid, cb) {
+    const { db, fs } = await getFirebase();
+    const q = fs.query(fs.collection(db, 'duels'), fs.where('playerIds', 'array-contains', uid));
+    return fs.onSnapshot(q, (snap) => {
+      cb(snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) })));
+    }, (err) => console.warn(err));
+  },
+
+  // ターゲットワード（本人しか読めない）
+  async getDuelSecret(duelId, uid) {
+    const { db, fs } = await getFirebase();
+    const snap = await fs.getDoc(fs.doc(db, 'duels', duelId, 'secrets', uid));
+    return snap.exists() ? snap.data() : null;
+  },
+
+  async setDuelSecret(duelId, uid, data) {
+    const { db, fs } = await getFirebase();
+    await fs.setDoc(fs.doc(db, 'duels', duelId, 'secrets', uid), data);
+  },
+
+  async createDummyOpponent() {
+    throw new GameError('LOCAL_ONLY');
+  },
+
   async addDummyMember() {
     throw new GameError('LOCAL_ONLY');
   },
@@ -285,7 +425,9 @@ const LOCAL_DB_KEY = 'nfclove:db';
 const localListeners = new Set();
 
 function localEmpty() {
-  return { players: {}, cards: {}, rooms: {}, members: {} };
+  return {
+    players: {}, cards: {}, rooms: {}, members: {}, duels: {}, duelSecrets: {},
+  };
 }
 function localLoad() {
   try {
@@ -325,6 +467,25 @@ function localFindActiveRoom(db, code) {
 
 const DUMMY_NAMES = ['ミナ', 'ソウタ', 'ユイ', 'ハルト', 'サキ'];
 const DUMMY_COLORS = ['#FF8FA3', '#6C9BFF', '#FFB86B', '#5CC9A7', '#B48CFF'];
+
+// テスト用の仮プレイヤーを db に追加してIDを返す（アンケートはランダム回答）
+function localCreateDummy(db, index, roomId) {
+  const dummyId = `dummy-${randomId(8)}`;
+  const survey = randomSurvey();
+  db.players[dummyId] = {
+    nickname: `${DUMMY_NAMES[index % DUMMY_NAMES.length]}（テスト）`,
+    color: DUMMY_COLORS[index % DUMMY_COLORS.length],
+    survey,
+    answeredCount: countAnswered(survey),
+    isDummy: true,
+    cardId: null,
+    currentRoomId: roomId,
+    currentDuelId: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  return dummyId;
+}
 
 const localStore = {
   async getPlayer(uid) {
@@ -466,24 +627,80 @@ const localStore = {
     const db = localLoad();
     const room = db.rooms[roomId];
     if (!room) throw new GameError('ROOM_NOT_FOUND');
-    const index = room.memberIds.length - 1;
-    const dummyId = `dummy-${randomId(8)}`;
-    const profile = {
-      nickname: `${DUMMY_NAMES[index % DUMMY_NAMES.length]}（テスト）`,
-      color: DUMMY_COLORS[index % DUMMY_COLORS.length],
-    };
-    const survey = {};
-    SURVEY.forEach((q) => {
-      const r = Math.random();
-      survey[q.id] = r < 0.4 ? 'A' : r < 0.8 ? 'B' : null;
-    });
-    db.players[dummyId] = {
-      ...profile, survey, answeredCount: countAnswered(survey), cardId: null,
-      currentRoomId: roomId, currentDuelId: null, createdAt: Date.now(), updatedAt: Date.now(),
-    };
-    localAddMember(db, roomId, dummyId, profile);
+    const dummyId = localCreateDummy(db, room.memberIds.length - 1, roomId);
+    localAddMember(db, roomId, dummyId, db.players[dummyId]);
     db.members[roomId][dummyId].isDummy = true;
     localSave(db);
+  },
+
+  /* ---------- 1対1モード ---------- */
+
+  async enterDuel(uid, opponentId, me) {
+    const db = localLoad();
+    const opponent = db.players[opponentId];
+    if (!opponent) throw new GameError('PLAYER_NOT_FOUND');
+    const duelId = duelIdFor(uid, opponentId);
+    const patch = duelEnterPatch(db.duels[duelId] || null, uid, opponentId, me, opponent);
+    if (patch) {
+      const data = resolveTime(patch.data, Date.now());
+      db.duels[duelId] = patch.mode === 'set' ? data : { ...db.duels[duelId], ...data };
+      // テスト相手はすぐに参加したことにする
+      if (opponent.isDummy && db.duels[duelId].status === 'waiting') {
+        Object.assign(db.duels[duelId], {
+          joined: { ...db.duels[duelId].joined, [opponentId]: true },
+          status: 'playing',
+          startedAt: Date.now(),
+        });
+      }
+      localSave(db);
+    }
+    return duelId;
+  },
+
+  async watchDuel(duelId, cb) {
+    return localSubscribe(() => {
+      const d = localLoad().duels[duelId];
+      cb(d ? { id: duelId, ...d } : null);
+    });
+  },
+
+  async updateDuel(duelId, fn) {
+    const db = localLoad();
+    const duel = db.duels[duelId];
+    if (!duel) throw new GameError('DUEL_NOT_FOUND');
+    const patch = fn({ id: duelId, ...duel });
+    if (!patch) return false;
+    db.duels[duelId] = { ...duel, ...resolveTime({ ...patch, updatedAt: SERVER_TIME }, Date.now()) };
+    localSave(db);
+    return true;
+  },
+
+  async watchIncomingDuels(uid, cb) {
+    return localSubscribe(() => {
+      const { duels } = localLoad();
+      cb(Object.entries(duels)
+        .map(([id, d]) => ({ id, ...d }))
+        .filter((d) => d.playerIds.includes(uid)));
+    });
+  },
+
+  async getDuelSecret(duelId, uid) {
+    return localLoad().duelSecrets[`${duelId}/${uid}`] || null;
+  },
+
+  async setDuelSecret(duelId, uid, data) {
+    const db = localLoad();
+    db.duelSecrets[`${duelId}/${uid}`] = data;
+    localSave(db);
+  },
+
+  // ローカルモード専用：1対1のテスト相手を作り、そのIDを返す
+  async createDummyOpponent() {
+    const db = localLoad();
+    const index = Object.values(db.players).filter((p) => p.isDummy).length;
+    const dummyId = localCreateDummy(db, index, null);
+    localSave(db);
+    return dummyId;
   },
 };
 

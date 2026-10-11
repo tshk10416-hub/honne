@@ -6,8 +6,24 @@ import { firebaseConfig } from './firebase-config.js';
 const SDK_BASE = 'https://www.gstatic.com/firebasejs/10.12.2';
 const LOCAL_FLAG = 'nfclove:localMode';
 const LOCAL_UID = 'nfclove:localUid';
+const EMULATOR_FLAG = 'nfclove:emulator';
+
+// 開発用：?emulator=1 で Firebase Emulator Suite（localhost）につなぐ
+function detectEmulator() {
+  const params = new URLSearchParams(location.search);
+  try {
+    if (params.get('emulator') === '1') sessionStorage.setItem(EMULATOR_FLAG, '1');
+    if (params.get('emulator') === '0') sessionStorage.removeItem(EMULATOR_FLAG);
+    return sessionStorage.getItem(EMULATOR_FLAG) === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+export const useEmulator = detectEmulator();
 
 function detectLocalMode() {
+  if (useEmulator) return false;
   const params = new URLSearchParams(location.search);
   try {
     if (params.get('local') === '1') sessionStorage.setItem(LOCAL_FLAG, '1');
@@ -32,9 +48,14 @@ export async function getFirebase() {
     import(`${SDK_BASE}/firebase-auth.js`),
     import(`${SDK_BASE}/firebase-firestore.js`),
   ]);
-  const app = appMod.initializeApp(firebaseConfig);
+  const config = useEmulator ? { apiKey: 'demo-key', projectId: 'demo-honne', authDomain: 'localhost' } : firebaseConfig;
+  const app = appMod.initializeApp(config);
   const auth = authMod.getAuth(app);
   const db = fs.getFirestore(app);
+  if (useEmulator) {
+    authMod.connectAuthEmulator(auth, `http://${location.hostname}:9099`, { disableWarnings: true });
+    fs.connectFirestoreEmulator(db, location.hostname, 8080);
+  }
   firebaseCtx = { app, auth, db, fs, authMod };
   return firebaseCtx;
 }

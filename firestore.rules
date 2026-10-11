@@ -54,28 +54,26 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 1対1モード（ステップ3で使用）
+    // 1対1モード：同じ2人は常に duels/pair_{uidの小さい方}_{大きい方} を使う
     match /duels/{duelId} {
-      allow read: if signedIn() && request.auth.uid in resource.data.playerIds;
-      allow create: if signedIn() && request.auth.uid in request.resource.data.playerIds
-        && request.resource.data.playerIds.size() == 2;
-      allow update: if signedIn() && request.auth.uid in resource.data.playerIds;
+      function isPair() {
+        return signedIn() && request.auth.uid in request.resource.data.playerIds
+          && request.resource.data.playerIds.size() == 2
+          && duelId == 'pair_' + request.resource.data.playerIds[0] + '_' + request.resource.data.playerIds[1];
+      }
+
+      // まだ存在しない対戦（初回タッチ）も読めるようにする
+      allow read: if signedIn() && (resource == null || request.auth.uid in resource.data.playerIds);
+      allow create: if isPair();
+      // 対戦の参加者だけが更新できる。参加者の入れ替えは不可
+      allow update: if signedIn() && request.auth.uid in resource.data.playerIds
+        && request.resource.data.playerIds == resource.data.playerIds;
       allow delete: if false;
 
-      function duelPlayer() {
-        return request.auth.uid in get(/databases/$(database)/documents/duels/$(duelId)).data.playerIds;
-      }
-
-      // ターゲットワード：本人だけ読める。作成は対戦の参加者が行う
+      // ターゲットワード：本人だけが読み書きできる
       match /secrets/{uid} {
-        allow read: if isMe(uid);
-        allow create: if signedIn() && duelPlayer();
-        allow update, delete: if false;
-      }
-      match /events/{eventId} {
-        allow read: if signedIn() && duelPlayer();
-        allow create: if signedIn() && duelPlayer() && request.resource.data.by == request.auth.uid;
-        allow update, delete: if false;
+        allow read, write: if isMe(uid)
+          && uid in get(/databases/$(database)/documents/duels/$(duelId)).data.playerIds;
       }
     }
 
