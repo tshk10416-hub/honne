@@ -137,7 +137,6 @@ function duelEnterPatch(duel, uid, opponentId, me, opponent) {
         turnSec: TURN_SECONDS,
         totalTurns: TOTAL_TURNS,
         scores: { [uid]: 0, [opponentId]: 0 },
-        counter: null,
         history: [],
         revealed: {},
         createdAt: duel?.createdAt || SERVER_TIME,

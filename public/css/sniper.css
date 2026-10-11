@@ -331,18 +331,14 @@
   opacity: 0.85;
 }
 
-.guard-hint {
+.defend-count {
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--choice-b-soft);
   color: var(--text);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.guard-hint:empty {
-  display: none;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .action-buttons {
@@ -393,23 +389,9 @@
   box-shadow: 0 8px 20px rgba(255, 122, 154, 0.4);
 }
 
-.btn-counter {
-  background: var(--choice-b);
-  box-shadow: 0 8px 20px rgba(91, 140, 255, 0.4);
-}
-
 .btn-pass {
   background: #9a8a94;
   box-shadow: 0 8px 20px rgba(90, 70, 80, 0.25);
-}
-
-.btn-action-wide {
-  width: 100%;
-  min-height: 110px;
-}
-
-.btn-action-wide .btn-action-main {
-  font-size: 24px;
 }
 
 .log-list {
@@ -507,11 +489,6 @@
 .badge-shot {
   background: var(--choice-a-soft);
   color: var(--primary-strong);
-}
-
-.badge-countered {
-  background: var(--choice-b-soft);
-  color: var(--choice-b);
 }
 
 .talk-card {

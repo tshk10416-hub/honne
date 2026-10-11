@@ -63,8 +63,8 @@
           <li><strong>先攻・後攻</strong>で交代します（順番はランダム）。1ターンは<strong id="rules-turn-sec">90</strong>秒です。</li>
           <li>攻撃ターンの人にだけ、相手に言わせる<strong>ワード</strong>と<strong>質問例</strong>が届きます。ワードは相手のアンケート回答から選ばれます。</li>
           <li>質問して、相手にワードを言わせたら <strong>SHOT</strong>（+1点）。次のワードへ進みます。難しいワードは<strong>パス</strong>できます。</li>
-          <li>守りの人は、質問に正直に答えます。狙われているワードに気付いたら、口に出して宣言して <strong>見破った！</strong>（当たり+1点、はずれ−1点）。</li>
-          <li>合計点が多いほうの勝ちです。</li>
+          <li>守りの人は、質問に<strong>自然に答えます</strong>。わざとワードを避けるのはなしです。</li>
+          <li>言わせたワードの数が多いほうの勝ちです。</li>
         </ol>
       </div>
     </section>
@@ -130,18 +130,14 @@
         <p class="rule-note">「家にいた」「出かけた」のように、ワードが入っていれば言い方が変わってもOKです。</p>
       </div>
 
-      <!-- 守りターン -->
+      <!-- 守りターン：質問に答えるだけ -->
       <div id="defend-panel" class="panel-stack" hidden>
         <div class="card defend-card">
-          <div class="big-emoji" aria-hidden="true">🛡️</div>
-          <p class="card-title" id="defend-title">質問に正直に答えよう</p>
+          <div class="big-emoji" aria-hidden="true">💬</div>
+          <p class="card-title" id="defend-title">質問に答えよう</p>
           <p class="muted" id="defend-desc"></p>
-          <p class="guard-hint" id="guard-hint"></p>
+          <p class="defend-count" id="defend-count"></p>
         </div>
-        <button type="button" class="btn-action btn-counter btn-action-wide" id="btn-counter">
-          <span class="btn-action-main">🛡️ 見破った！</span>
-          <span class="btn-action-sub">ワードを口に出して宣言してから押す（当たり+1／はずれ−1）</span>
-        </button>
       </div>
 
       <p class="section-label">ログ</p>
@@ -201,29 +197,6 @@
         <button type="button" class="btn" data-close>まだ</button>
         <button type="button" class="btn btn-primary" id="modal-shot-yes">言った！</button>
       </div>
-    </div>
-  </div>
-
-  <!-- 相手の「見破った！」を判定（攻撃している人が判定する） -->
-  <div class="modal" id="modal-judge" hidden>
-    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-judge-title">
-      <div class="big-emoji" aria-hidden="true">🛡️</div>
-      <h2 class="subtitle" id="modal-judge-title"><span id="modal-judge-name"></span>さんが「見破った！」と宣言</h2>
-      <p class="muted">宣言された言葉は、あなたの今のワード「<strong id="modal-judge-word"></strong>」でしたか？</p>
-      <div class="btn-row">
-        <button type="button" class="btn" id="modal-judge-miss">はずれ</button>
-        <button type="button" class="btn btn-primary" id="modal-judge-hit">当たり…</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 自分の「見破った！」の判定待ち -->
-  <div class="modal" id="modal-counter-wait" hidden>
-    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-wait-title">
-      <div class="spinner" aria-hidden="true" style="margin:0 auto"></div>
-      <h2 class="subtitle" id="modal-wait-title">相手の判定を待っています</h2>
-      <p class="muted">相手のスマホで「当たり／はずれ」を選んでもらってください。</p>
-      <button type="button" class="btn btn-ghost btn-block" id="modal-counter-cancel">宣言を取り消す</button>
     </div>
   </div>
 

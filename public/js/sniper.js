@@ -3,13 +3,13 @@
 //   sniper.html?duel=<duelId>   挑戦の受諾・再読み込み・再戦
 //
 // 対戦の流れ：先攻の準備（ready）→ 先攻の攻撃（active）→ 後攻の準備 → 後攻の攻撃 → 結果
-//   攻撃する人だけがワードと質問例を持ち、相手に言わせたら SHOT（+1）。
-//   守る人は質問に正直に答え、ワードに気付いたら「見破った！」（当たり+1／はずれ−1、判定は攻撃する人）。
+//   攻撃する人だけがワードと質問例を持ち、相手に言わせたら SHOT（+1）。難しいワードはパス（0点）。
+//   守る人は質問に自然に答えるだけ（わざと避けるのはなし）。言わせたワードの数で勝敗を決める。
 import { signIn, isLocalMode } from './firebase.js';
 import {
   store, toMillis, attackerOf, SERVER_TIME, TURN_SECONDS, TOTAL_TURNS,
 } from './store.js';
-import { pickSniperWord, answeredQuestions } from './topics.js';
+import { pickSniperWord } from './topics.js';
 import {
   $, avatarHtml, escapeHtml, show, toast, errorMessage, showFatal, showLocalBanner,
 } from './ui.js';
@@ -128,7 +128,7 @@ function ensureSecret() {
   return state.secretTask;
 }
 
-// SHOT・パス・見破られた後に次のワードを引く
+// SHOT・パスの後に次のワードを引く
 async function drawNextWord() {
   const prev = state.secret;
   const word = await pickSniperWord(state.opponent, prev.used);
@@ -196,7 +196,7 @@ function renderTurnReady() {
   const first = duel.turnIndex === 0;
   const sec = turnSec(duel);
   $('#turn-step').textContent = `${turnLabel(duel)}（${duel.turnIndex + 1}/${totalTurns(duel)}ターン）`;
-  $('#turn-emoji').textContent = mine ? '⚔️' : '🛡️';
+  $('#turn-emoji').textContent = mine ? '⚔️' : '💬';
   if (mine) {
     $('#turn-title').textContent = first ? 'あなたが先攻です' : '攻守交代！あなたの攻撃ターン';
     $('#turn-desc').textContent = `スタートを押すと、${nameOf(opponentId)}さんに言わせるワードと質問例が届きます。${sec}秒のあいだに、質問してワードを言わせよう。`;
@@ -204,7 +204,7 @@ function renderTurnReady() {
     $('#turn-title').textContent = first
       ? `${nameOf(opponentId)}さんが先攻です`
       : `攻守交代！${nameOf(opponentId)}さんの攻撃ターン`;
-    $('#turn-desc').textContent = `${nameOf(opponentId)}さんがあなたに質問します。正直に答えながら、狙われているワードを見破ろう。`;
+    $('#turn-desc').textContent = `${nameOf(opponentId)}さんがあなたに質問して、あるワードを言わせようとします。わざと避けたりせず、自然に答えてね。`;
   }
   $('#turn-score').innerHTML = scoreLineHtml();
   show($('#turn-score'), !first);
@@ -213,8 +213,6 @@ function renderTurnReady() {
   show($('#turn-wait'), !mine);
   $('#turn-wait-text').textContent = `${nameOf(opponentId)}さんがスタートするのを待っています`;
   closeModal('modal-shot');
-  closeModal('modal-judge');
-  closeModal('modal-counter-wait');
   showView('turn');
 }
 
@@ -226,7 +224,7 @@ async function startTurn() {
   try {
     await store.updateDuel(state.duelId, (d) => (d.status === 'playing' && d.round === round
       && d.turnIndex === turnIndex && d.turnPhase === 'ready' && attackerOf(d) === uid
-      ? { turnPhase: 'active', turnStartedAt: SERVER_TIME, counter: null }
+      ? { turnPhase: 'active', turnStartedAt: SERVER_TIME }
       : null));
   } catch (err) {
     toast(errorMessage(err), 'error');
@@ -245,10 +243,8 @@ async function endTurn() {
   try {
     await store.updateDuel(state.duelId, (d) => {
       if (d.status !== 'playing' || d.round !== round || d.turnIndex !== turnIndex || d.turnPhase !== 'active') return null;
-      if (turnIndex + 1 >= totalTurns(d)) return { status: 'finished', counter: null };
-      return {
-        turnIndex: turnIndex + 1, turnPhase: 'ready', turnStartedAt: null, counter: null,
-      };
+      if (turnIndex + 1 >= totalTurns(d)) return { status: 'finished' };
+      return { turnIndex: turnIndex + 1, turnPhase: 'ready', turnStartedAt: null };
     });
   } catch (err) {
     console.warn(err);
@@ -302,10 +298,6 @@ function logText(entry) {
   switch (entry.type) {
     case 'shot':
       return `🎯 ${actor}がSHOT！「${entry.word}」を言わせた（+1）`;
-    case 'countered':
-      return `🛡️ ${actor}が見破った！「${entry.word}」（+1）`;
-    case 'miss':
-      return `💦 ${actor}の「見破った！」ははずれ（−1）`;
     case 'pass':
       return `⏭ ${actor}がワードをパス`;
     default:
@@ -335,30 +327,14 @@ function renderTimer() {
   if (left <= 0) endTurn();
 }
 
-function renderCounterState() {
-  const { duel, uid } = state;
-  const counter = duel.counter;
-  const mine = !!counter && counter.by === uid;
-  // 相手の宣言を判定するのは、攻撃していてワードを持っている人
-  const judge = !!counter && counter.by !== uid && isMyAttack(duel) && hasCurrentSecret();
-  show($('#modal-counter-wait'), mine);
-  if (judge) {
-    $('#modal-judge-name').textContent = nameOf(counter.by);
-    $('#modal-judge-word').textContent = state.secret.targetWord;
-  }
-  show($('#modal-judge'), judge);
-  $('#btn-counter').disabled = !!counter;
-}
-
-// 守りのヒント：相手のワードは自分の回答から出ている
+// 守る人の画面：質問に答えるだけ。このターンに言わされた数を出す
 function renderDefend() {
+  const { duel } = state;
   const opp = nameOf(state.opponentId);
-  $('#defend-title').textContent = `${opp}さんの質問に正直に答えよう`;
-  $('#defend-desc').textContent = `${opp}さんは、あなたに言わせたいワードを狙って質問してきます。うそはNGですが、言い方を工夫してかわすのはOK。`;
-  const themes = answeredQuestions(state.me).map((q) => q.theme);
-  $('#guard-hint').textContent = themes.length
-    ? `🛡️ ヒント：ワードは、あなたのアンケート回答（${themes.join('・')}）から出ています。`
-    : '🛡️ ヒント：あなたはアンケート未回答なので、ワードは雑談のトークテーマから出ています。';
+  const said = (duel.history || []).filter((h) => h.type === 'shot' && h.turn === duel.turnIndex).length;
+  $('#defend-title').textContent = `${opp}さんの質問に答えよう`;
+  $('#defend-desc').textContent = `${opp}さんは、あなたにあるワードを言わせようと質問してきます。わざと避けたりせず、自然に答えてね。どのワードだったかは、言わされたときと結果画面でわかります。`;
+  $('#defend-count').textContent = `このターンに言わされたワード：${said}個`;
 }
 
 function renderPlaying() {
@@ -369,7 +345,7 @@ function renderPlaying() {
   const banner = $('#turn-banner');
   banner.textContent = mine
     ? `⚔️ あなたの攻撃ターン（${turnLabel(duel)}）`
-    : `🛡️ ${nameOf(state.opponentId)}さんの攻撃ターン（${turnLabel(duel)}）`;
+    : `💬 ${nameOf(state.opponentId)}さんの攻撃ターン（${turnLabel(duel)}）`;
   banner.classList.toggle('is-attack', mine);
   banner.classList.toggle('is-defend', !mine);
   show($('#attack-panel'), mine);
@@ -378,7 +354,6 @@ function renderPlaying() {
   else renderDefend();
   renderLog();
   renderTimer();
-  renderCounterState();
 
   const key = turnKey(duel);
   if (state.shownStartFor !== key && remainingMs(duel) > (turnSec(duel) - 3) * 1000) {
@@ -436,67 +411,6 @@ async function passWord() {
     });
     if (ok) {
       toast('パスしました。次のワードです');
-      await drawNextWord();
-    }
-  } catch (err) {
-    toast(errorMessage(err), 'error');
-  } finally {
-    state.busy = false;
-  }
-}
-
-/* ---------- 見破った！（守る人の宣言） ---------- */
-
-async function declareCounter() {
-  if (state.busy) return;
-  state.busy = true;
-  const { uid } = state;
-  try {
-    await store.updateDuel(state.duelId, (d) => (d.status === 'playing' && d.turnPhase === 'active'
-      && attackerOf(d) !== uid && !d.counter
-      ? { counter: { by: uid, turn: d.turnIndex, at: Date.now() } }
-      : null));
-  } catch (err) {
-    toast(errorMessage(err), 'error');
-  } finally {
-    state.busy = false;
-  }
-}
-
-async function cancelCounter() {
-  const { uid } = state;
-  try {
-    await store.updateDuel(state.duelId, (d) => (d.counter?.by === uid ? { counter: null } : null));
-  } catch (err) {
-    toast(errorMessage(err), 'error');
-  }
-}
-
-// 相手の宣言を判定する（判定するのはワードを持っている攻撃側）
-async function judgeCounter(hit) {
-  if (state.busy || !hasCurrentSecret()) return;
-  state.busy = true;
-  const { uid, secret } = state;
-  try {
-    const ok = await store.updateDuel(state.duelId, (d) => {
-      if (!d.counter || d.counter.by === uid || d.turnIndex !== secret.turn) return null;
-      const by = d.counter.by;
-      const entry = hit
-        ? {
-          type: 'countered', actor: by, owner: uid, turn: secret.turn, word: secret.targetWord, sourceLabel: secret.sourceLabel, at: Date.now(),
-        }
-        : {
-          type: 'miss', actor: by, owner: null, turn: secret.turn, word: null, at: Date.now(),
-        };
-      return {
-        counter: null,
-        scores: { ...d.scores, [by]: (d.scores[by] || 0) + (hit ? 1 : -1) },
-        history: [...(d.history || []), entry],
-      };
-    });
-    closeModal('modal-judge');
-    if (ok && hit) {
-      toast('見破られた…次のワードです');
       await drawNextWord();
     }
   } catch (err) {
@@ -568,7 +482,6 @@ function wordItemsHtml(ownerId) {
   }
   const badge = {
     shot: '<span class="badge badge-shot">SHOT成功</span>',
-    countered: '<span class="badge badge-countered">見破られた</span>',
     pass: '<span class="badge">パス</span>',
     left: '<span class="badge">時間切れ</span>',
   };
@@ -584,8 +497,6 @@ function wordItemsHtml(ownerId) {
 
 function renderResult() {
   closeModal('modal-shot');
-  closeModal('modal-judge');
-  closeModal('modal-counter-wait');
   const { duel, uid, opponentId } = state;
   const mine = duel.scores?.[uid] ?? 0;
   const theirs = duel.scores?.[opponentId] ?? 0;
@@ -648,10 +559,7 @@ async function onDuel(duel) {
         if (isMyAttack(duel)) {
           try {
             await ensureSecret();
-            if (state.duel === duel) {
-              renderWord();
-              renderCounterState();
-            }
+            if (state.duel === duel) renderWord();
           } catch (err) {
             toast(errorMessage(err), 'error');
           }
@@ -690,7 +598,6 @@ const bot = {
   onDuel(duel) {
     if (!this.active || !duel.turnOrder) return;
     const botId = state.opponentId;
-    const you = state.uid;
 
     // 再戦の申し込みにはすぐ応じる
     if (duel.status === 'waiting' && !duel.joined?.[botId]) {
@@ -709,7 +616,7 @@ const bot = {
       const botAttacks = attackerOf(duel) === botId;
       if (duel.turnPhase === 'ready' && botAttacks) {
         this.later(1500, () => store.updateDuel(state.duelId, (d) => (d.turnIndex === turn && d.turnPhase === 'ready'
-          ? { turnPhase: 'active', turnStartedAt: Date.now(), counter: null }
+          ? { turnPhase: 'active', turnStartedAt: Date.now() }
           : null)));
       }
       // ボットの攻撃ターン：途中で1回 SHOT
@@ -723,32 +630,6 @@ const bot = {
           }
           : null)));
       }
-      // あなたの攻撃ターン：途中で1回「見破った！」
-      if (duel.turnPhase === 'active' && !botAttacks) {
-        this.later(30000 + Math.random() * 20000, () => store.updateDuel(state.duelId, (d) => (d.turnIndex === turn && d.turnPhase === 'active' && !d.counter
-          ? { counter: { by: botId, turn, at: Date.now() } }
-          : null)));
-      }
-    }
-
-    // あなたの「見破った！」をボットが判定（半々で当たり）
-    if (duel.status === 'playing' && duel.counter?.by === you && attackerOf(duel) === botId) {
-      const turn = duel.turnIndex;
-      this.later(1500, () => store.updateDuel(state.duelId, (d) => {
-        if (d.counter?.by !== you || d.turnIndex !== turn) return null;
-        const hit = Math.random() < 0.5;
-        return {
-          counter: null,
-          scores: { ...d.scores, [you]: d.scores[you] + (hit ? 1 : -1) },
-          history: [...d.history, hit
-            ? {
-              type: 'countered', actor: you, owner: botId, turn, word: 'ダミーワード', sourceLabel: 'テスト相手のワード', at: Date.now(),
-            }
-            : {
-              type: 'miss', actor: you, owner: null, turn, word: null, at: Date.now(),
-            }],
-        };
-      }));
     }
 
     // ボットの攻撃ターンが終わったら、最後のワードを公開
@@ -784,10 +665,6 @@ function bindEvents() {
   });
   $('#modal-shot-yes').addEventListener('click', confirmShot);
   $('#btn-pass').addEventListener('click', passWord);
-  $('#btn-counter').addEventListener('click', declareCounter);
-  $('#modal-counter-cancel').addEventListener('click', cancelCounter);
-  $('#modal-judge-hit').addEventListener('click', () => judgeCounter(true));
-  $('#modal-judge-miss').addEventListener('click', () => judgeCounter(false));
   document.querySelectorAll('[data-close]').forEach((btn) => {
     btn.addEventListener('click', () => closeModal(btn.closest('.modal').id));
   });
