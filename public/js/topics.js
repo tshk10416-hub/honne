@@ -30,9 +30,11 @@ export function answeredQuestions(player) {
   return SURVEY.filter((q) => survey[q.id] === 'A' || survey[q.id] === 'B');
 }
 
-// ワード・スナイパー：相手（opponent）の回答から、自分が言わせるワードを決める。
-// exclude に入っている語（このラウンドで使用済み）は避ける。
+// ワード・スナイパー：相手（opponent）が選んだ回答そのものの言葉を、自分が言わせるワードにする。
+// 攻略ヒント（hintAnswer＝相手の回答、hintTalk＝話の振り方）も一緒に返す。
+// exclude に入っている語（このラウンドで使用済み）は避け、まだ出していない問いの語を優先する。
 export async function pickSniperWord(opponent, exclude = []) {
+  const name = opponent?.nickname || '相手';
   const candidates = [];
   answeredQuestions(opponent).forEach((q) => {
     const choice = opponent.survey[q.id];
@@ -43,10 +45,12 @@ export async function pickSniperWord(opponent, exclude = []) {
       sourceRef: `${q.id}.${choice}`,
       sourceLabel: `相手のアンケート「${q.text}」の回答「${opt.label}」から`,
       hintTheme: q.theme,
+      hintAnswer: `${name}さんは「${q.text}」に「${opt.label}」と回答`,
+      hintTalk: q.talkTip,
     }));
   });
-  const fresh = candidates.filter((c) => !exclude.includes(c.targetWord));
-  if (fresh.length) return pick(fresh);
+  const picked = pickFresh(candidates, exclude);
+  if (picked) return picked;
 
   // 相手が未回答（または使い切った）ときはプリセットのトークテーマから
   const presets = (await loadPresets()).filter((t) => t.modes.includes('sniper') && t.targetWords.length);
@@ -57,9 +61,19 @@ export async function pickSniperWord(opponent, exclude = []) {
     sourceRef: `preset:${t.id}`,
     sourceLabel: `トークテーマ「${t.text}」から`,
     hintTheme: t.text,
+    hintAnswer: `アンケートの回答が足りないので、トークテーマ「${t.text}」から出題`,
+    hintTalk: `${name}さんに「${t.text}」を聞いてみよう`,
   })));
-  const freshPresets = presetCandidates.filter((c) => !exclude.includes(c.targetWord));
-  return pick(freshPresets.length ? freshPresets : presetCandidates);
+  return pickFresh(presetCandidates, exclude) || pick(presetCandidates);
+}
+
+// 使用済みの語を除いて抽選。同じ問い（sourceRef）の語が続かないよう、未使用の問いを優先する。
+function pickFresh(candidates, exclude) {
+  const fresh = candidates.filter((c) => !exclude.includes(c.targetWord));
+  if (!fresh.length) return null;
+  const usedRefs = new Set(candidates.filter((c) => exclude.includes(c.targetWord)).map((c) => c.sourceRef));
+  const unusedTopic = fresh.filter((c) => !usedRefs.has(c.sourceRef));
+  return pick(unusedTopic.length ? unusedTopic : fresh);
 }
 
 // プロファイル・ベット：主役の回答済みの問いから出題。なければプリセット＋主役の即決（needsStance）。

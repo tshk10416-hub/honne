@@ -192,12 +192,13 @@ rooms/{roomId}
 | `text` | string | `"初デートの食事代"` |
 | `options` | map | `{ A: {...}, B: {...} }` |
 | `options.A.label` | string | `"完全割り勘"` |
-| `options.A.targetWords` | array\<string\> | `["割り勘", "ポイント", "コスパ"]` |
+| `options.A.targetWords` | array\<string\> | `["割り勘", "半分こ"]` |
 | `options.B.label` | string | `"どちらかが多めに払う"` |
-| `options.B.targetWords` | array\<string\> | `["ごちそう", "記念日", "奢り"]` |
+| `options.B.targetWords` | array\<string\> | `["おごる", "ごちそう"]` |
 | `betPrompt` | string | `"〇〇さんは初デートの食事代、どっち派？"` |
+| `talkTip` | string | `"ごはんやデートのお会計の話を振ってみよう"` |
 
-`targetWords` はワード・スナイパー用です。相手が選んだ選択肢に関連する言葉をターゲットにすることで、「相手が自然に口にしそうだが、狙わないと出てこない」難易度になります。仕様上は2択ですが、`options` を map にしているので将来 C を追加して3択にもできます。
+`targetWords` はワード・スナイパー用です。相手が選んだ**回答そのものの言葉**（その話題になれば本人が自然に口にする語）をターゲットにします。撃つ側には相手の回答と `talkTip`（話の振り方）が攻略ヒントとして出るので、どの話題に持ち込めばよいかが分かります。守る側も自分の回答から狙われていると分かるので、その話題を振られたら COUNTER を狙えます。仕様上は2択ですが、`options` を map にしているので将来 C を追加して3択にもできます。
 
 #### `presetTopics/{topicId}`（50問のフォールバック用お題プール）
 
@@ -206,7 +207,7 @@ rooms/{roomId}
 | `text` | string | お題本文 |
 | `type` | string | `"binary"`（2択）または `"talk"`（トークテーマ） |
 | `optionA` / `optionB` | string \| null | 2択の選択肢（`talk` は null） |
-| `targetWords` | array\<string\> | ワード・スナイパー用の候補語 |
+| `targetWords` | array\<string\> | ワード・スナイパー用の候補語（`talk` のみ。その話題になれば誰でも口にする語） |
 | `spicy` | number | きわどさ 1〜3。アノニマス・ターゲットは 2 以上から出題 |
 | `modes` | array\<string\> | 使えるモード `["sniper","bet","anonymous"]` |
 | `random` | number | 0〜1 の乱数。`where("random", ">=", r).limit(1)` でランダム抽選するため |
@@ -270,7 +271,9 @@ rooms/{roomId}
 | `used` | array\<string\> | このラウンドで使ったワード（重複を避ける） |
 | `source` / `sourceRef` | string | `"survey"` / `"q3.B"`、または `"preset"` / `"preset:t05"` |
 | `sourceLabel` | string | 結果画面に出す出どころ（例「相手のアンケート『休日の予定は？』の回答『外出・アクティブ』から」） |
-| `hintTheme` | string | 対戦中に出す話題のヒント |
+| `hintTheme` | string | 話題（アンケートの theme、またはトークテーマ） |
+| `hintAnswer` | string | 攻略ヒント：相手の回答（例「Aさんは『休日の予定は？』に『家から一歩も出ない』と回答」） |
+| `hintTalk` | string | 攻略ヒント：話の振り方（アンケートの `talkTip`） |
 
 得点ルール：SHOT（自己申告）で +1 し、次のワードを引きます。COUNTER は口でワードを宣言してからボタンを押し、ワードの持ち主が「当たり」なら宣言者 +2（持ち主は次のワードへ）、「はずれ」なら宣言者 −1 です。ログは当初案の `events` サブコレクションをやめ、対戦ドキュメントの `history` にまとめました。
 
@@ -372,7 +375,7 @@ rooms/{roomId}
 
 | 場面 | 優先 | フォールバック |
 |---|---|---|
-| ワード・スナイパー | 相手の回答済みの問いからランダムに1問選び、その選択肢の `targetWords` から1語 | 相手が全問未回答なら `presetTopics`（type=talk）から抽選し、その `targetWords` から1語 |
+| ワード・スナイパー | 相手の回答済みの問いの選択肢の `targetWords` から1語（このラウンドでまだ出していない問いを優先） | 相手が全問未回答（または使い切った）なら `presetTopics`（type=talk）から抽選し、その `targetWords` から1語 |
 | プロファイル・ベット | 主役の回答済みの問いのうち、このルームで未出題のもの | 主役が未回答なら `presetTopics`（type=binary）から抽選し、S31 で主役が3秒で即決 |
 | アノニマス・ターゲット | `presetTopics`（modes に anonymous を含み spicy≥2）から未出題を抽選 | 全員がその場で回答するため不要 |
 

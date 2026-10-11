@@ -60,9 +60,9 @@
       <div class="card rules">
         <p class="card-title">遊び方（2分間）</p>
         <ol class="rules-list">
-          <li>あなたにだけ<strong>ターゲットワード</strong>が届きます。</li>
-          <li>雑談を装って、相手にその言葉を言わせたら <strong>SHOT</strong>（+1点）。言わせたら次のワードが届きます。</li>
-          <li>相手の狙いに気付いたら、ワードを口に出して宣言して <strong>COUNTER</strong>。当たれば+2点、はずれは−1点。</li>
+          <li>あなたにだけ<strong>ターゲットワード</strong>が届きます。ワードは<strong>相手のアンケート回答そのもの</strong>から選ばれ、相手の回答と話の振り方が<strong>攻略ヒント</strong>として出ます。</li>
+          <li>雑談を装ってその話題に持ち込み、相手にワードを言わせたら <strong>SHOT</strong>（+1点）。言わせたら次のワードが届きます。</li>
+          <li>相手のワードは<strong>あなた自身の回答</strong>から出ています。自分の回答に関係する話を振られたら要注意。狙いに気付いたら、ワードを口に出して宣言して <strong>COUNTER</strong>。当たれば+2点、はずれは−1点。</li>
         </ol>
       </div>
     </section>
@@ -87,7 +87,12 @@
           <span class="word-text" id="word-text">……</span>
           <span class="word-cover" id="word-cover">👀 タップして確認<br><small>相手に見られないように</small></span>
         </button>
-        <p class="word-hint">話題のヒント：<span id="word-hint"></span></p>
+        <div class="word-hint" id="word-hint" hidden>
+          <p class="word-hint-title">💡 攻略ヒント</p>
+          <p class="word-hint-answer" id="word-hint-answer"></p>
+          <p class="word-hint-talk" id="word-hint-talk"></p>
+        </div>
+        <p class="word-hint-closed" id="word-hint-closed">ワードを確認すると攻略ヒントも見られます</p>
       </div>
 
       <div class="action-buttons">
@@ -100,6 +105,8 @@
           <span class="btn-action-sub">COUNTER（宣言してから）</span>
         </button>
       </div>
+
+      <p class="guard-hint" id="guard-hint"></p>
 
       <p class="section-label">ログ</p>
       <ul class="log-list" id="log-list">

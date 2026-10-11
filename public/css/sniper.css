@@ -210,9 +210,49 @@
 }
 
 .word-hint {
-  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.18);
   font-size: 13px;
+  line-height: 1.5;
+}
+
+.word-hint p {
+  margin: 0;
+}
+
+.word-hint-title {
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.word-hint-answer {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.word-hint-talk {
   opacity: 0.92;
+}
+
+.word-hint-closed {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.guard-hint {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--choice-b-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.guard-hint:empty {
+  display: none;
 }
 
 .action-buttons {

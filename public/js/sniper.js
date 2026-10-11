@@ -3,7 +3,7 @@
 //   sniper.html?duel=<duelId>   挑戦の受諾・再読み込み・再戦
 import { signIn, isLocalMode } from './firebase.js';
 import { store, toMillis } from './store.js';
-import { pickSniperWord } from './topics.js';
+import { pickSniperWord, answeredQuestions } from './topics.js';
 import {
   $, avatarHtml, escapeHtml, show, toast, errorMessage, showFatal, showLocalBanner,
 } from './ui.js';
@@ -156,11 +156,16 @@ function renderWord(isNew = false) {
   const { secret } = state;
   if (!secret) {
     $('#word-text').textContent = '抽選中…';
-    $('#word-hint').textContent = '';
+    show($('#word-hint'), false);
+    show($('#word-hint-closed'), false);
     return;
   }
   $('#word-text').textContent = secret.targetWord;
-  $('#word-hint').textContent = secret.hintTheme;
+  // 攻略ヒントは相手の回答が書いてあるので、ワードと一緒に隠しておく
+  $('#word-hint-answer').textContent = secret.hintAnswer || `話題：${secret.hintTheme}`;
+  $('#word-hint-talk').textContent = secret.hintTalk || '';
+  show($('#word-hint'), state.wordVisible);
+  show($('#word-hint-closed'), !state.wordVisible);
   $('#word-no').textContent = `${secret.wordNo}つ目`;
   $('#word-toggle').setAttribute('aria-pressed', String(state.wordVisible));
   if (isNew) {
@@ -223,10 +228,19 @@ function renderCounterState() {
   $('#btn-counter').disabled = !!counter;
 }
 
+// 守りのヒント：相手のワードは自分の回答から出ている
+function renderGuardHint() {
+  const themes = answeredQuestions(state.me).map((q) => q.theme);
+  $('#guard-hint').textContent = themes.length
+    ? `🛡️ 守りのヒント：${nameOf(state.opponentId)}さんのワードは、あなたの回答（${themes.join('・')}）から出ています。その話を振られたら要注意！`
+    : `🛡️ 守りのヒント：あなたはアンケート未回答なので、${nameOf(state.opponentId)}さんのワードは雑談のトークテーマから出ています。`;
+}
+
 function renderPlaying() {
   showView('playing');
   renderScores();
   renderWord();
+  renderGuardHint();
   renderLog();
   renderTimer();
   renderCounterState();
