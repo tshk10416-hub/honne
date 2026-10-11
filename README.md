@@ -28,6 +28,12 @@ honne/
 
 `bet.html`（ステップ4）と `anonymous.html` はまだありません。
 
+## 公開URL
+
+https://tshk10416-hub.github.io/honne/
+
+main に変更が入ると、GitHub Actions（`.github/workflows/deploy-pages.yml`）が `public/` を `gh-pages` ブランチに公開します。Firebase の設定値を入れるまでは、1台で遊べるローカルモードで動きます。
+
 ## まず1台で試す（ローカルモード）
 
 Firebase を用意しなくても、この端末だけで画面を確認できます。
