@@ -31,7 +31,7 @@ export function answeredQuestions(player) {
 }
 
 // ワード・スナイパー：相手（opponent）が選んだ回答そのものの言葉を、自分が言わせるワードにする。
-// 攻略ヒント（hintAnswer＝相手の回答、hintTalk＝話の振り方）も一緒に返す。
+// そのワードを言わせるための質問例（questions）と、相手の回答（hintAnswer）も一緒に返す。
 // exclude に入っている語（このラウンドで使用済み）は避け、まだ出していない問いの語を優先する。
 export async function pickSniperWord(opponent, exclude = []) {
   const name = opponent?.nickname || '相手';
@@ -39,14 +39,14 @@ export async function pickSniperWord(opponent, exclude = []) {
   answeredQuestions(opponent).forEach((q) => {
     const choice = opponent.survey[q.id];
     const opt = q.options[choice];
-    opt.targetWords.forEach((word) => candidates.push({
+    opt.targetWords.forEach(({ word, questions }) => candidates.push({
       targetWord: word,
+      questions,
       source: 'survey',
       sourceRef: `${q.id}.${choice}`,
       sourceLabel: `相手のアンケート「${q.text}」の回答「${opt.label}」から`,
       hintTheme: q.theme,
       hintAnswer: `${name}さんは「${q.text}」に「${opt.label}」と回答`,
-      hintTalk: q.talkTip,
     }));
   });
   const picked = pickFresh(candidates, exclude);
@@ -55,14 +55,14 @@ export async function pickSniperWord(opponent, exclude = []) {
   // 相手が未回答（または使い切った）ときはプリセットのトークテーマから
   const presets = (await loadPresets()).filter((t) => t.modes.includes('sniper') && t.targetWords.length);
   const presetCandidates = [];
-  presets.forEach((t) => t.targetWords.forEach((word) => presetCandidates.push({
+  presets.forEach((t) => t.targetWords.forEach(({ word, questions }) => presetCandidates.push({
     targetWord: word,
+    questions,
     source: 'preset',
     sourceRef: `preset:${t.id}`,
     sourceLabel: `トークテーマ「${t.text}」から`,
     hintTheme: t.text,
     hintAnswer: `アンケートの回答が足りないので、トークテーマ「${t.text}」から出題`,
-    hintTalk: `${name}さんに「${t.text}」を聞いてみよう`,
   })));
   return pickFresh(presetCandidates, exclude) || pick(presetCandidates);
 }

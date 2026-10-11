@@ -67,7 +67,82 @@
   margin-top: 4px;
 }
 
+/* ---------- ターンの準備 ---------- */
+
+.turn-step {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--choice-a-soft);
+  color: var(--primary-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.turn-desc {
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.turn-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.btn-big {
+  min-height: 60px;
+  font-size: 20px;
+}
+
 /* ---------- 対戦中 ---------- */
+
+.turn-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  text-align: center;
+  color: #fff;
+}
+
+.turn-banner.is-attack {
+  background: var(--choice-a);
+}
+
+.turn-banner.is-defend {
+  background: var(--choice-b);
+}
+
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-stack[hidden] {
+  display: none;
+}
+
+.rule-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.defend-card {
+  text-align: center;
+}
+
+.defend-card .muted {
+  margin: 6px 0 10px;
+  line-height: 1.6;
+}
 
 .scorebar {
   display: flex;
@@ -226,13 +301,28 @@
   opacity: 0.95;
 }
 
-.word-hint-answer {
-  font-size: 15px;
-  font-weight: 700;
+.question-list {
+  margin: 6px 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.word-hint-talk {
-  opacity: 0.92;
+.question-list li {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3a2a33;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.word-hint-answer {
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 .word-hint-closed {
@@ -306,6 +396,20 @@
 .btn-counter {
   background: var(--choice-b);
   box-shadow: 0 8px 20px rgba(91, 140, 255, 0.4);
+}
+
+.btn-pass {
+  background: #9a8a94;
+  box-shadow: 0 8px 20px rgba(90, 70, 80, 0.25);
+}
+
+.btn-action-wide {
+  width: 100%;
+  min-height: 110px;
+}
+
+.btn-action-wide .btn-action-main {
+  font-size: 24px;
 }
 
 .log-list {

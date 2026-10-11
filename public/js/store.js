@@ -82,7 +82,15 @@ function deepMerge(target, src) {
 /* ------------------------------------------------------------------ */
 /* 1対1モード（ワード・スナイパー）の共通ロジック                        */
 /* ------------------------------------------------------------------ */
-export const DUEL_SECONDS = 120;
+// ターン制：先攻・後攻が交互に攻撃する。1ターンの秒数と、1人あたりの攻撃ターン数
+export const TURN_SECONDS = 90;
+export const TURNS_PER_PLAYER = 1;
+export const TOTAL_TURNS = TURNS_PER_PLAYER * 2;
+
+// turnIndex 番目のターンで攻撃する人
+export function attackerOf(duel, turnIndex = duel.turnIndex) {
+  return duel.turnOrder?.[turnIndex % 2] || null;
+}
 
 // 書き込み時にサーバー時刻（ローカルモードでは端末時刻）へ置き換える目印
 export const SERVER_TIME = '__server_time__';
@@ -102,13 +110,17 @@ function resolveTime(data, timeValue) {
 
 // タッチしたときの対戦ドキュメントの変化を決める。
 // 終わった対戦なら新しいラウンドを作り、待機中なら自分を参加済みにして、2人そろえば開始する。
+// 開始すると先攻の「準備」（turnPhase: 'ready'）になり、攻撃する人がスタートを押すとターンが始まる。
 function duelEnterPatch(duel, uid, opponentId, me, opponent) {
   const ids = [uid, opponentId].sort();
   const players = {
     [uid]: { nickname: me.nickname, color: me.color },
     [opponentId]: { nickname: opponent.nickname, color: opponent.color },
   };
-  if (!duel || duel.status === 'finished' || duel.status === 'cancelled') {
+  // ターン制になる前に作られた対戦（turnOrder がない）は、作り直す
+  const legacy = duel && !duel.turnOrder;
+  if (!duel || legacy || duel.status === 'finished' || duel.status === 'cancelled') {
+    const turnOrder = Math.random() < 0.5 ? [uid, opponentId] : [opponentId, uid];
     return {
       mode: 'set',
       data: {
@@ -118,7 +130,12 @@ function duelEnterPatch(duel, uid, opponentId, me, opponent) {
         round: (duel?.round || 0) + 1,
         joined: { [uid]: true, [opponentId]: false },
         startedAt: null,
-        durationSec: DUEL_SECONDS,
+        turnOrder,
+        turnIndex: 0,
+        turnPhase: 'ready',
+        turnStartedAt: null,
+        turnSec: TURN_SECONDS,
+        totalTurns: TOTAL_TURNS,
         scores: { [uid]: 0, [opponentId]: 0 },
         counter: null,
         history: [],
