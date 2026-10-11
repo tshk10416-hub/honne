@@ -1,0 +1,148 @@
+rules_version = '2';
+
+// プロトタイプ用のセキュリティルール（ステップ1設計書の 5章 に対応）
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isMe(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // マスターデータ（読み取り専用。投入はコンソールか Admin SDK で行う）
+    match /surveyQuestions/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /presetTopics/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // プレイヤー：本人だけ書き込み。お題の抽出に使うため、ログイン済みなら読み取り可
+    match /players/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid);
+      allow delete: if false;
+    }
+
+    // カード：個人カードは持ち主がいないときだけ自分のものにできる。親カードは roomId だけ更新可
+    match /cards/{cardId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (
+        (request.resource.data.kind == 'player' && request.resource.data.ownerId == request.auth.uid) ||
+        (request.resource.data.kind == 'table' && request.resource.data.ownerId == null)
+      );
+      allow update: if signedIn() && (
+        // 持ち主のいない個人カードを登録
+        (resource.data.kind == 'player' && resource.data.ownerId == null
+          && request.resource.data.ownerId == request.auth.uid
+          && changedKeys().hasOnly(['ownerId', 'label', 'roomId', 'kind'])
+          && request.resource.data.kind == 'player') ||
+        // 自分の個人カードを手放す
+        (resource.data.kind == 'player' && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == null
+          && changedKeys().hasOnly(['ownerId'])) ||
+        // 親カードのルーム付け替え
+        (resource.data.kind == 'table' && changedKeys().hasOnly(['roomId']))
+      );
+      allow delete: if false;
+    }
+
+    // 1対1モード（ステップ3で使用）
+    match /duels/{duelId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.playerIds;
+      allow create: if signedIn() && request.auth.uid in request.resource.data.playerIds
+        && request.resource.data.playerIds.size() == 2;
+      allow update: if signedIn() && request.auth.uid in resource.data.playerIds;
+      allow delete: if false;
+
+      function duelPlayer() {
+        return request.auth.uid in get(/databases/$(database)/documents/duels/$(duelId)).data.playerIds;
+      }
+
+      // ターゲットワード：本人だけ読める。作成は対戦の参加者が行う
+      match /secrets/{uid} {
+        allow read: if isMe(uid);
+        allow create: if signedIn() && duelPlayer();
+        allow update, delete: if false;
+      }
+      match /events/{eventId} {
+        allow read: if signedIn() && duelPlayer();
+        allow create: if signedIn() && duelPlayer() && request.resource.data.by == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // 複数人ルーム
+    match /rooms/{roomId} {
+      function room() {
+        return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+      }
+      function isHost() {
+        return signedIn() && room().hostId == request.auth.uid;
+      }
+      function isMember() {
+        return signedIn() && request.auth.uid in room().memberIds;
+      }
+      // 自分自身の入室・退出だけを変更しているか
+      function onlySelfJoinOrLeave() {
+        let before = resource.data.memberIds.toSet();
+        let after = request.resource.data.memberIds.toSet();
+        return changedKeys().hasOnly(['memberIds'])
+          && after.difference(before).union(before.difference(after)).hasOnly([request.auth.uid])
+          && request.resource.data.memberIds.size() <= 6;
+      }
+
+      // ルームコードでの検索に使うため、ログイン済みなら読み取り可
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid];
+      allow update: if signedIn() && (resource.data.hostId == request.auth.uid || onlySelfJoinOrLeave());
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if isMe(uid);
+        // 本人は生存確認（lastSeenAt）などを更新、ホストはスコアを更新
+        allow update: if isMe(uid) || isHost();
+      }
+
+      // ラウンド（ステップ4以降で使用）：進行はホストが書き込む
+      match /rounds/{roundId} {
+        function round() {
+          return get(/databases/$(database)/documents/rooms/$(roomId)/rounds/$(roundId)).data;
+        }
+
+        allow read: if isMember();
+        allow create, update: if isHost()
+          // 主役は正解の公開（result）だけ書き込める
+          || (isMember() && resource.data.protagonistId == request.auth.uid
+              && changedKeys().hasOnly(['result', 'phase', 'phaseEndsAt']));
+        allow delete: if false;
+
+        // プロファイル・ベットの正解：主役本人だけ
+        match /secret/{docId} {
+          allow read, write: if signedIn() && round().protagonistId == request.auth.uid;
+        }
+        match /bets/{uid} {
+          allow read: if isMember();
+          allow create, update: if isMe(uid) && isMember();
+        }
+        match /answers/{uid} {
+          allow read: if isMember();
+          allow create, update: if isMe(uid) && isMember();
+        }
+        match /votes/{uid} {
+          allow read: if isMember();
+          allow create, update: if isMe(uid) && isMember();
+        }
+      }
+    }
+  }
+}
