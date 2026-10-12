@@ -196,7 +196,8 @@ function renderTurnReady() {
   const first = duel.turnIndex === 0;
   const sec = turnSec(duel);
   $('#turn-step').textContent = `${turnLabel(duel)}（${duel.turnIndex + 1}/${totalTurns(duel)}ターン）`;
-  $('#turn-emoji').textContent = mine ? '⚔️' : '💬';
+  $('#turn-emoji').textContent = mine ? '♥' : '♠';
+  $('#turn-emoji').classList.toggle('is-defend', !mine);
   if (mine) {
     $('#turn-title').textContent = first ? 'あなたが先攻です' : '攻守交代！あなたの攻撃ターン';
     $('#turn-desc').textContent = `スタートを押すと、${nameOf(opponentId)}さんに言わせるワードと質問例が届きます。${sec}秒のあいだに、質問してワードを言わせよう。`;
@@ -297,9 +298,9 @@ function logText(entry) {
   const actor = entry.actor === state.uid ? 'あなた' : `${nameOf(entry.actor)}さん`;
   switch (entry.type) {
     case 'shot':
-      return `🎯 ${actor}がSHOT！「${entry.word}」を言わせた（+1）`;
+      return `${actor}がSHOT！「${entry.word}」を言わせた（+1）`;
     case 'pass':
-      return `⏭ ${actor}がワードをパス`;
+      return `${actor}がワードをパス`;
     default:
       return '';
   }
@@ -313,7 +314,7 @@ function renderLog() {
   }
   $('#log-list').innerHTML = entries.slice().reverse().map((h) => {
     const tag = Number.isInteger(h.turn) ? turnLabel(state.duel, h.turn) : '';
-    return `<li class="log-item">${escapeHtml(logText(h))}<span class="log-time">${escapeHtml(tag)}</span></li>`;
+    return `<li class="log-item${h.type === 'shot' ? ' is-shot' : ''}">${escapeHtml(logText(h))}<span class="log-time">${escapeHtml(tag)}</span></li>`;
   }).join('');
 }
 
@@ -344,8 +345,8 @@ function renderPlaying() {
   renderScores();
   const banner = $('#turn-banner');
   banner.textContent = mine
-    ? `⚔️ あなたの攻撃ターン（${turnLabel(duel)}）`
-    : `💬 ${nameOf(state.opponentId)}さんの攻撃ターン（${turnLabel(duel)}）`;
+    ? `♥ あなたの攻撃ターン（${turnLabel(duel)}）`
+    : `♠ ${nameOf(state.opponentId)}さんの攻撃ターン（${turnLabel(duel)}）`;
   banner.classList.toggle('is-attack', mine);
   banner.classList.toggle('is-defend', !mine);
   show($('#attack-panel'), mine);
@@ -501,13 +502,16 @@ function renderResult() {
   const mine = duel.scores?.[uid] ?? 0;
   const theirs = duel.scores?.[opponentId] ?? 0;
   if (mine > theirs) {
-    $('#result-emoji').textContent = '🏆';
+    $('#result-emoji').textContent = '勝';
+    $('#result-emoji').className = 'stamp';
     $('#result-title').textContent = 'あなたの勝ち！';
   } else if (mine < theirs) {
-    $('#result-emoji').textContent = '💘';
+    $('#result-emoji').textContent = '負';
+    $('#result-emoji').className = 'stamp is-lose';
     $('#result-title').textContent = `${nameOf(opponentId)}さんの勝ち`;
   } else {
-    $('#result-emoji').textContent = '🤝';
+    $('#result-emoji').textContent = '分';
+    $('#result-emoji').className = 'stamp is-draw';
     $('#result-title').textContent = '引き分け';
   }
   $('#result-score').innerHTML = scoreLineHtml();

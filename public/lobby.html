@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ff5c8a">
+  <meta name="theme-color" content="#4a1530">
   <title>待機画面 | HONNE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
   <link rel="stylesheet" href="css/common.css">
 </head>
 <body>
@@ -21,7 +21,7 @@
     <!-- S03 待機画面（ホーム） -->
     <section id="view-home" class="screen" hidden>
       <div class="topbar">
-        <span class="logo">HONNE</span>
+        <span class="logo">本音<small>HONNE</small></span>
         <a class="btn btn-ghost btn-small" href="profile.html?edit=name">編集</a>
       </div>
 
@@ -60,7 +60,7 @@
       <p class="section-label">遊び方</p>
 
       <div class="card guide">
-        <span class="guide-icon tap-anim" aria-hidden="true">💘</span>
+        <span class="guide-icon" aria-hidden="true">♥</span>
         <div>
           <p class="card-title">1対1で遊ぶ</p>
           <p class="muted">相手の個人カードに、あなたのスマホをタッチ。<br>「ワード・スナイパー」が始まります（約2分）。</p>
@@ -68,7 +68,7 @@
       </div>
 
       <div class="card guide">
-        <span class="guide-icon tap-anim" aria-hidden="true">🃏</span>
+        <span class="guide-icon is-club" aria-hidden="true">♣</span>
         <div>
           <p class="card-title">みんなで遊ぶ（3〜6人）</p>
           <p class="muted">テーブル中央の親カードにスマホをタッチして入室。</p>
@@ -124,14 +124,14 @@
         <div class="choices">
           <button type="button" class="mode-card" data-mode="profileBet">
             <span class="mode-card-head">
-              <span class="mode-card-emoji" aria-hidden="true">🎯</span>
+              <span class="mode-card-emoji" aria-hidden="true">♦</span>
               <span class="mode-card-title">プロファイル・ベット</span>
             </span>
             <span class="mode-card-desc">主役の答えを、質問で探って当てる。主役は順番に交代。</span>
           </button>
           <button type="button" class="mode-card" data-mode="anonymous">
             <span class="mode-card-head">
-              <span class="mode-card-emoji" aria-hidden="true">🕵️</span>
+              <span class="mode-card-emoji is-spade" aria-hidden="true">♠</span>
               <span class="mode-card-title">アノニマス・ターゲット</span>
             </span>
             <span class="mode-card-desc">きわどい2択に匿名回答。トークで少数派をあぶり出す。</span>

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ff5c8a">
+  <meta name="theme-color" content="#4a1530">
   <title>ワード・スナイパー | HONNE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
   <link rel="stylesheet" href="css/common.css">
   <link rel="stylesheet" href="css/sniper.css">
 </head>
@@ -28,7 +28,6 @@
       </div>
 
       <div class="sniper-logo">
-        <span class="sniper-logo-icon" aria-hidden="true">🎯</span>
         <h1 class="title">ワード・スナイパー</h1>
       </div>
 
@@ -72,7 +71,7 @@
     <!-- ターンの準備（先攻・後攻の交代） -->
     <section id="view-turn" class="screen screen-center" hidden>
       <span class="turn-step" id="turn-step">先攻</span>
-      <div class="big-emoji" id="turn-emoji" aria-hidden="true">⚔️</div>
+      <div class="big-emoji" id="turn-emoji" aria-hidden="true">♥</div>
       <h1 class="title" id="turn-title">あなたの攻撃ターン</h1>
       <p class="muted turn-desc" id="turn-desc"></p>
 
@@ -107,10 +106,10 @@
           </div>
           <button type="button" class="word-reveal" id="word-toggle" aria-pressed="false">
             <span class="word-text" id="word-text">……</span>
-            <span class="word-cover" id="word-cover">👀 タップして確認<br><small>相手に見られないように</small></span>
+            <span class="word-cover" id="word-cover"><span class="word-cover-label">タップしてめくる</span><small>相手に見られないように</small></span>
           </button>
           <div class="word-hint" id="word-hint" hidden>
-            <p class="word-hint-title">💡 こう聞いてみよう</p>
+            <p class="word-hint-title">こう聞いてみよう</p>
             <ul class="question-list" id="word-questions"></ul>
             <p class="word-hint-answer" id="word-hint-answer"></p>
           </div>
@@ -119,12 +118,12 @@
 
         <div class="action-buttons">
           <button type="button" class="btn-action btn-shot" id="btn-shot">
-            <span class="btn-action-main">🎯 言わせた！</span>
+            <span class="btn-action-main">言わせた！</span>
             <span class="btn-action-sub">SHOT +1</span>
           </button>
           <button type="button" class="btn-action btn-pass" id="btn-pass">
-            <span class="btn-action-main">⏭ パス</span>
-            <span class="btn-action-sub">次のワードへ（0点）</span>
+            <span class="btn-action-main">パス</span>
+            <span class="btn-action-sub">0点で次のワードへ</span>
           </button>
         </div>
         <p class="rule-note">「家にいた」「出かけた」のように、ワードが入っていれば言い方が変わってもOKです。</p>
@@ -133,7 +132,7 @@
       <!-- 守りターン：質問に答えるだけ -->
       <div id="defend-panel" class="panel-stack" hidden>
         <div class="card defend-card">
-          <div class="big-emoji" aria-hidden="true">💬</div>
+          <div class="big-emoji" aria-hidden="true">♠</div>
           <p class="card-title" id="defend-title">質問に答えよう</p>
           <p class="muted" id="defend-desc"></p>
           <p class="defend-count" id="defend-count"></p>
@@ -152,7 +151,7 @@
         <span class="topbar-title">結果</span>
       </div>
       <div class="result-hero">
-        <div class="big-emoji" id="result-emoji" aria-hidden="true">🏆</div>
+        <div class="stamp" id="result-emoji" aria-hidden="true">勝</div>
         <h1 class="title" id="result-title"></h1>
         <div class="result-score" id="result-score"></div>
       </div>
@@ -164,7 +163,7 @@
       <ul class="word-list" id="result-opp-words"></ul>
 
       <div class="card talk-card">
-        <p class="card-title">💬 エピソードトーク</p>
+        <p class="card-title">エピソードトーク</p>
         <p class="muted">ワードはお互いのアンケート回答から選ばれています。「どうしてその答えにしたの？」と聞いてみよう。</p>
       </div>
 
@@ -177,7 +176,7 @@
 
     <!-- キャンセル -->
     <section id="view-cancelled" class="screen screen-center" hidden>
-      <div class="big-emoji" aria-hidden="true">🍃</div>
+      <div class="big-emoji" aria-hidden="true" style="color:var(--ink-soft)">♣</div>
       <h1 class="title" id="cancelled-title">対戦はキャンセルされました</h1>
       <p class="muted">また話したくなったら、カードをタッチしてね。</p>
       <div class="btn-row" style="width:100%">
