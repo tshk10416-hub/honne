@@ -1,0 +1,578 @@
+/* =========================================================
+   ワード・スナイパー（1対1モード）専用スタイル
+   ワードは紅いトランプ1枚。藍の裏面をめくって確認する。
+   結果は朱肉のはんこで押す。
+   ========================================================= */
+
+.sniper-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.sniper-logo .title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.2;
+  color: var(--beni);
+}
+
+/* ---------- マッチング（VS の表示は common.css） ---------- */
+
+/* ---------- ターンの準備 ---------- */
+
+.turn-step {
+  padding: 2px 12px;
+  border: 1.5px solid var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  padding-left: calc(12px + 0.2em);
+}
+
+#turn-emoji {
+  font-size: 96px;
+}
+
+#turn-emoji.is-defend {
+  color: var(--ai);
+}
+
+.turn-desc {
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.turn-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 30px;
+}
+
+/* ---------- 対戦中 ---------- */
+
+.turn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 900;
+  text-align: center;
+  color: var(--paper);
+}
+
+.turn-banner.is-attack {
+  background: var(--beni);
+}
+
+.turn-banner.is-defend {
+  background: var(--ai);
+}
+
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-stack[hidden] {
+  display: none;
+}
+
+.rule-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.defend-card {
+  text-align: center;
+  border-color: var(--ai);
+  border-width: 2px;
+}
+
+.defend-card .big-emoji {
+  color: var(--ai);
+  font-size: 64px;
+}
+
+.defend-card .card-title {
+  margin-top: 8px;
+}
+
+.defend-card .muted {
+  margin: 6px 0 12px;
+  line-height: 1.7;
+}
+
+.defend-count {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ai-soft);
+  color: var(--ai);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* スコア表：数字は大きく、名前は控えめに */
+.scorebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-width: 2px;
+}
+
+.score-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.score-side-right {
+  flex-direction: row-reverse;
+}
+
+.score-num {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.score-name {
+  font-size: 11px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-side-right .score-meta {
+  text-align: right;
+}
+
+.score-meta {
+  min-width: 0;
+}
+
+.timer {
+  flex: 0 0 96px;
+  text-align: center;
+  padding: 0 6px;
+  border-left: 1.5px solid var(--rule);
+  border-right: 1.5px solid var(--rule);
+}
+
+.timer-text {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.timer-progress {
+  height: 5px;
+  margin-top: 6px;
+}
+
+.timer.is-hurry .timer-text {
+  color: var(--beni);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* ---------- ワードカード（紅いトランプ） ---------- */
+
+.word-card {
+  position: relative;
+  padding: 16px 18px 16px;
+  border-radius: 12px;
+  background: var(--beni);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 6px var(--beni),
+    inset 0 0 0 7px rgba(251, 247, 244, 0.45),
+    4px 4px 0 var(--ink);
+}
+
+.word-card.is-new {
+  animation: deal 0.35s ease-out;
+}
+
+.word-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 4px 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.word-no {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.word-reveal {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 112px;
+  margin: 10px 0 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+  perspective: 900px;
+  font: inherit;
+}
+
+.word-reveal:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 3px;
+}
+
+.word-text {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1.2;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  padding: 8px;
+}
+
+/* 裏面：藍の格子。タップで左にめくれる */
+.word-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: inherit;
+  border: 2px solid var(--paper);
+  background-color: var(--ai);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(251, 247, 244, 0.16) 0 2px, transparent 2px 10px),
+    repeating-linear-gradient(-45deg, rgba(251, 247, 244, 0.16) 0 2px, transparent 2px 10px);
+  color: var(--paper);
+  font-weight: 900;
+  font-size: 17px;
+  line-height: 1.4;
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.45s ease;
+  backface-visibility: hidden;
+}
+
+.word-cover-label {
+  padding: 4px 14px;
+  border-radius: 4px;
+  background: var(--ai);
+}
+
+.word-cover small {
+  padding: 0 10px;
+  border-radius: 4px;
+  background: var(--ai);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.word-reveal[aria-pressed='true'] .word-cover {
+  transform: rotateY(-180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.word-hint {
+  padding: 12px 12px 10px;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.word-hint p {
+  margin: 0;
+}
+
+.word-hint-title {
+  font-weight: 900;
+  color: var(--beni-deep);
+}
+
+.question-list {
+  margin: 8px 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.question-list li {
+  position: relative;
+  padding: 8px 4px;
+  border-top: 1px dashed var(--rule);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.word-hint-answer {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.word-hint-closed {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+/* ---------- SHOT / パス ---------- */
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+}
+
+.btn-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 92px;
+  padding: 12px 8px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.btn-action:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.btn-action-main {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.btn-action-sub {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.btn-shot {
+  background: var(--beni);
+  color: var(--paper);
+}
+
+.btn-pass {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ---------- ログ ---------- */
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-item,
+.log-empty {
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
+}
+
+.log-item {
+  animation: pop-in 0.3s ease;
+}
+
+.log-item.is-shot {
+  font-weight: 700;
+}
+
+.log-item.is-shot::before {
+  content: '♥ ';
+  color: var(--beni);
+}
+
+.log-empty {
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.log-time {
+  float: right;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 結果 ---------- */
+
+.result-score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-display);
+  font-size: 36px;
+}
+
+.result-score .avatar {
+  font-size: 18px;
+}
+
+.word-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.word-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.word-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.word-item-word {
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.word-item-source {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.word-item-empty {
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 4px 2px;
+}
+
+.badge-shot {
+  background: var(--beni);
+  border-color: var(--beni);
+  color: var(--paper);
+}
+
+.talk-card {
+  background: var(--paper-2);
+  border-style: dashed;
+}
+
+/* ---------- モーダル・演出 ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(47, 11, 29, 0.6);
+  animation: fade-in 0.2s ease;
+}
+
+.modal-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  border-top: 3px solid var(--beni);
+  background: var(--paper);
+  text-align: center;
+}
+
+.start-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--beni);
+  pointer-events: none;
+}
+
+.start-text {
+  font-family: var(--font-display);
+  font-size: 64px;
+  color: var(--paper);
+  animation: zoom-in 0.9s ease forwards;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes zoom-in {
+  0% { transform: scale(0.4); opacity: 0; }
+  40% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 山札から配られる */
+@keyframes deal {
+  from { transform: translate(-12px, -18px) rotate(-4deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}

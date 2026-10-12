@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4a1530">
+  <title>時限爆弾解除 | HONNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/defuse.css">
+</head>
+<body>
+  <main id="app" class="app">
+
+    <!-- 読み込み中 -->
+    <section id="view-loading" class="screen screen-center">
+      <div class="spinner" role="progressbar" aria-label="読み込み中"></div>
+    </section>
+
+    <!-- D10 マッチング（相手の参加待ち／挑戦を受ける） -->
+    <section id="view-waiting" class="screen" hidden>
+      <div class="topbar">
+        <a class="btn btn-ghost" href="lobby.html">← ホーム</a>
+        <span class="topbar-title">1対1モード</span>
+        <span style="width:64px"></span>
+      </div>
+
+      <div class="defuse-logo">
+        <h1 class="title">時限爆弾解除</h1>
+        <p class="muted">ディフューズ・トーク</p>
+      </div>
+
+      <div class="versus card">
+        <div class="versus-player" id="wait-me"></div>
+        <span class="versus-vs">＆</span>
+        <div class="versus-player" id="wait-opp"></div>
+      </div>
+
+      <!-- 自分は参加済み・相手待ち -->
+      <div id="wait-pending" class="card" hidden>
+        <div class="waiting" style="padding:4px 0 12px">
+          <div class="spinner" aria-hidden="true"></div>
+          <span id="wait-pending-text">相手の参加を待っています</span>
+        </div>
+        <p class="muted">相手のスマホで<strong>あなたの個人カード</strong>をタッチしてもらうか、相手のホーム画面に届く挑戦を受けてもらってください。</p>
+        <button type="button" class="btn btn-ghost btn-block btn-danger" id="wait-cancel" style="margin-top:8px">やめる</button>
+      </div>
+
+      <!-- 相手から挑戦が届いている -->
+      <div id="wait-invite" class="card" hidden>
+        <p class="card-title" id="wait-invite-text">挑戦が届いています</p>
+        <div class="btn-row" style="margin-top:12px">
+          <button type="button" class="btn" id="wait-decline">断る</button>
+          <button type="button" class="btn btn-primary" id="wait-accept">受けて立つ</button>
+        </div>
+      </div>
+
+      <div class="card rules">
+        <p class="card-title">遊び方（2人で協力）</p>
+        <ol class="rules-list">
+          <li>爆弾の解除コードは、<strong>相手のアンケートの答え</strong>2つです。</li>
+          <li>起爆したら<strong id="rules-sec">60</strong>秒。お互いに大急ぎで質問して、相手の答えを聞き出します。</li>
+          <li>聞き出した答えを <strong>A／B</strong> で入力して、<strong>解除</strong>を押します。</li>
+          <li>2人とも解除できたら成功。1つでも間違えるか、時間切れで爆発です。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- D11 解除コードの準備 -->
+    <section id="view-arming" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">起爆の準備</span>
+        <button type="button" class="btn btn-ghost btn-small btn-danger" id="arm-cancel">やめる</button>
+      </div>
+
+      <div>
+        <h1 class="title">あなたの解除コード</h1>
+        <p class="muted" id="arm-desc">この2問の答えが、あなたの解除コードです。相手はあなたに質問して、答えを当てにきます。正直に答えてね。</p>
+      </div>
+
+      <ol class="code-list" id="arm-codes"></ol>
+
+      <div class="arm-status card">
+        <div class="arm-player" id="arm-me"></div>
+        <div class="arm-player" id="arm-opp"></div>
+      </div>
+
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-primary btn-block btn-big" id="arm-ready" disabled>準備OK</button>
+      <div class="waiting" id="arm-wait" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="arm-wait-text">相手の準備を待っています</span>
+      </div>
+    </section>
+
+    <!-- D12 解除（60秒） -->
+    <section id="view-live" class="screen bomb" hidden>
+      <div class="bomb-head">
+        <p class="bomb-order" id="live-order">相手の解除コードを特定せよ</p>
+        <div class="bomb-timer" id="live-timer" role="timer" aria-live="off">60.00</div>
+        <div class="bomb-fuse" aria-hidden="true"><div class="bomb-fuse-bar" id="live-fuse"></div></div>
+        <p class="bomb-partner" id="live-partner"></p>
+      </div>
+
+      <div class="panel-list" id="live-panels"></div>
+
+      <div class="bomb-done" id="live-done" hidden>
+        <p class="bomb-done-title">あなたの解除は成功</p>
+        <p class="bomb-done-desc" id="live-done-desc"></p>
+      </div>
+
+      <button type="button" class="btn-defuse" id="live-defuse" disabled>
+        <span class="btn-defuse-main">同時解除</span>
+        <span class="btn-defuse-sub" id="live-defuse-sub">2つとも選ぶと押せます</span>
+      </button>
+    </section>
+
+    <!-- D13 結果 -->
+    <section id="view-result" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">結果</span>
+      </div>
+      <div class="result-hero">
+        <div class="stamp" id="result-stamp" aria-hidden="true">解除</div>
+        <h1 class="result-title" id="result-title">MISSION COMPLETE</h1>
+        <p class="muted" id="result-desc"></p>
+      </div>
+
+      <div class="penalty" id="result-penalty" hidden>
+        <p class="penalty-label">ペナルティ</p>
+        <p class="penalty-text">お互いの良いところを<br>1つ言ってから解散！</p>
+      </div>
+
+      <p class="section-label">あなたが当てるコード</p>
+      <ul class="answer-list" id="result-mine"></ul>
+
+      <p class="section-label" id="result-opp-label">相手が当てるコード</p>
+      <ul class="answer-list" id="result-opp"></ul>
+
+      <div class="spacer"></div>
+      <div class="btn-row">
+        <a class="btn" href="lobby.html">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="result-retry">もう一度</button>
+      </div>
+    </section>
+
+    <!-- キャンセル -->
+    <section id="view-cancelled" class="screen screen-center" hidden>
+      <div class="big-emoji" aria-hidden="true" style="color:var(--ink-soft)">♣</div>
+      <h1 class="title">解除はキャンセルされました</h1>
+      <p class="muted">また話したくなったら、カードをタッチしてね。</p>
+      <div class="btn-row" style="width:100%">
+        <a class="btn" href="lobby.html">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="cancelled-retry">もう一度申し込む</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 起爆のカウントダウン -->
+  <div class="countdown" id="countdown" hidden>
+    <p class="countdown-label">起爆まで</p>
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- 爆発 -->
+  <div class="boom" id="boom" hidden>
+    <div class="boom-text">GAME OVER</div>
+  </div>
+
+  <script type="module" src="js/defuse.js"></script>
+</body>
+</html>

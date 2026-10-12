@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4a1530">
+  <title>ワード・スナイパー | HONNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/sniper.css">
+</head>
+<body>
+  <main id="app" class="app">
+
+    <!-- 読み込み中 -->
+    <section id="view-loading" class="screen screen-center">
+      <div class="spinner" role="progressbar" aria-label="読み込み中"></div>
+    </section>
+
+    <!-- S10 マッチング（相手の参加待ち／挑戦を受ける） -->
+    <section id="view-waiting" class="screen" hidden>
+      <div class="topbar">
+        <a class="btn btn-ghost" href="lobby.html">← ホーム</a>
+        <span class="topbar-title">1対1モード</span>
+        <span style="width:64px"></span>
+      </div>
+
+      <div class="sniper-logo">
+        <h1 class="title">ワード・スナイパー</h1>
+      </div>
+
+      <div class="versus card">
+        <div class="versus-player" id="wait-me"></div>
+        <span class="versus-vs">VS</span>
+        <div class="versus-player" id="wait-opp"></div>
+      </div>
+
+      <!-- 自分は参加済み・相手待ち -->
+      <div id="wait-pending" class="card" hidden>
+        <div class="waiting" style="padding:4px 0 12px">
+          <div class="spinner" aria-hidden="true"></div>
+          <span id="wait-pending-text">相手の参加を待っています</span>
+        </div>
+        <p class="muted">相手のスマホで<strong>あなたの個人カード</strong>をタッチしてもらうか、相手のホーム画面に届く挑戦を受けてもらってください。</p>
+        <button type="button" class="btn btn-ghost btn-block btn-danger" id="wait-cancel" style="margin-top:8px">対戦をやめる</button>
+      </div>
+
+      <!-- 相手から挑戦が届いている -->
+      <div id="wait-invite" class="card" hidden>
+        <p class="card-title" id="wait-invite-text">挑戦が届いています</p>
+        <div class="btn-row" style="margin-top:12px">
+          <button type="button" class="btn" id="wait-decline">断る</button>
+          <button type="button" class="btn btn-primary" id="wait-accept">受けて立つ</button>
+        </div>
+      </div>
+
+      <div class="card rules">
+        <p class="card-title">遊び方（ターン制）</p>
+        <ol class="rules-list">
+          <li><strong>先攻・後攻</strong>で交代します（順番はランダム）。1ターンは<strong id="rules-turn-sec">90</strong>秒です。</li>
+          <li>攻撃ターンの人にだけ、相手に言わせる<strong>ワード</strong>と<strong>質問例</strong>が届きます。ワードは相手のアンケート回答から選ばれます。</li>
+          <li>質問して、相手にワードを言わせたら <strong>SHOT</strong>（+1点）。次のワードへ進みます。難しいワードは<strong>パス</strong>できます。</li>
+          <li>守りの人は、質問に<strong>自然に答えます</strong>。わざとワードを避けるのはなしです。</li>
+          <li>言わせたワードの数が多いほうの勝ちです。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ターンの準備（先攻・後攻の交代） -->
+    <section id="view-turn" class="screen screen-center" hidden>
+      <span class="turn-step" id="turn-step">先攻</span>
+      <div class="big-emoji" id="turn-emoji" aria-hidden="true">♥</div>
+      <h1 class="title" id="turn-title">あなたの攻撃ターン</h1>
+      <p class="muted turn-desc" id="turn-desc"></p>
+
+      <div class="turn-score card" id="turn-score"></div>
+
+      <button type="button" class="btn btn-primary btn-block btn-big" id="turn-start" hidden>スタート</button>
+      <div class="waiting" id="turn-wait" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="turn-wait-text">相手がスタートするのを待っています</span>
+      </div>
+    </section>
+
+    <!-- S11 対戦（攻撃ターン／守りターン） -->
+    <section id="view-playing" class="screen" hidden>
+      <div class="scorebar card">
+        <div class="score-side" id="score-me"></div>
+        <div class="timer">
+          <div class="timer-text" id="timer-text">1:30</div>
+          <div class="progress timer-progress" aria-hidden="true"><div id="timer-bar" class="progress-bar"></div></div>
+        </div>
+        <div class="score-side score-side-right" id="score-opp"></div>
+      </div>
+
+      <div class="turn-banner" id="turn-banner"></div>
+
+      <!-- 攻撃ターン -->
+      <div id="attack-panel" class="panel-stack" hidden>
+        <div class="word-card" id="word-card">
+          <div class="word-head">
+            <span class="word-label">相手に言わせるワード</span>
+            <span class="word-no" id="word-no">1つ目</span>
+          </div>
+          <button type="button" class="word-reveal" id="word-toggle" aria-pressed="false">
+            <span class="word-text" id="word-text">……</span>
+            <span class="word-cover" id="word-cover"><span class="word-cover-label">タップしてめくる</span><small>相手に見られないように</small></span>
+          </button>
+          <div class="word-hint" id="word-hint" hidden>
+            <p class="word-hint-title">こう聞いてみよう</p>
+            <ul class="question-list" id="word-questions"></ul>
+            <p class="word-hint-answer" id="word-hint-answer"></p>
+          </div>
+          <p class="word-hint-closed" id="word-hint-closed">ワードを確認すると、質問例も見られます</p>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" class="btn-action btn-shot" id="btn-shot">
+            <span class="btn-action-main">言わせた！</span>
+            <span class="btn-action-sub">SHOT +1</span>
+          </button>
+          <button type="button" class="btn-action btn-pass" id="btn-pass">
+            <span class="btn-action-main">パス</span>
+            <span class="btn-action-sub">0点で次のワードへ</span>
+          </button>
+        </div>
+        <p class="rule-note">「家にいた」「出かけた」のように、ワードが入っていれば言い方が変わってもOKです。</p>
+      </div>
+
+      <!-- 守りターン：質問に答えるだけ -->
+      <div id="defend-panel" class="panel-stack" hidden>
+        <div class="card defend-card">
+          <div class="big-emoji" aria-hidden="true">♠</div>
+          <p class="card-title" id="defend-title">質問に答えよう</p>
+          <p class="muted" id="defend-desc"></p>
+          <p class="defend-count" id="defend-count"></p>
+        </div>
+      </div>
+
+      <p class="section-label">ログ</p>
+      <ul class="log-list" id="log-list">
+        <li class="log-empty">まだ動きはありません</li>
+      </ul>
+    </section>
+
+    <!-- S12 結果 -->
+    <section id="view-result" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">結果</span>
+      </div>
+      <div class="result-hero">
+        <div class="stamp" id="result-emoji" aria-hidden="true">勝</div>
+        <h1 class="title" id="result-title"></h1>
+        <div class="result-score" id="result-score"></div>
+      </div>
+
+      <p class="section-label">あなたが狙ったワード</p>
+      <ul class="word-list" id="result-my-words"></ul>
+
+      <p class="section-label" id="result-opp-label">相手が狙ったワード</p>
+      <ul class="word-list" id="result-opp-words"></ul>
+
+      <div class="card talk-card">
+        <p class="card-title">エピソードトーク</p>
+        <p class="muted">ワードはお互いのアンケート回答から選ばれています。「どうしてその答えにしたの？」と聞いてみよう。</p>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="btn-row">
+        <a class="btn" href="lobby.html">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="result-rematch">もう一戦</button>
+      </div>
+    </section>
+
+    <!-- キャンセル -->
+    <section id="view-cancelled" class="screen screen-center" hidden>
+      <div class="big-emoji" aria-hidden="true" style="color:var(--ink-soft)">♣</div>
+      <h1 class="title" id="cancelled-title">対戦はキャンセルされました</h1>
+      <p class="muted">また話したくなったら、カードをタッチしてね。</p>
+      <div class="btn-row" style="width:100%">
+        <a class="btn" href="lobby.html">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="cancelled-retry">もう一度申し込む</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SHOT の確認 -->
+  <div class="modal" id="modal-shot" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-shot-title">
+      <h2 class="subtitle" id="modal-shot-title">相手が「<span id="modal-shot-word"></span>」と言った？</h2>
+      <p class="muted">ワードが入っていれば、言い方が変わってもOKです。自己申告で、結果画面でワードは相手にも公開されます。</p>
+      <div class="btn-row">
+        <button type="button" class="btn" data-close>まだ</button>
+        <button type="button" class="btn btn-primary" id="modal-shot-yes">言った！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ターン開始の合図 -->
+  <div class="start-overlay" id="start-overlay" hidden>
+    <div class="start-text" id="start-text">START!</div>
+  </div>
+
+  <script type="module" src="js/sniper.js"></script>
+</body>
+</html>

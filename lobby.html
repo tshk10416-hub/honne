@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4a1530">
+  <title>待機画面 | HONNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+  <main id="app" class="app">
+
+    <!-- 読み込み中 -->
+    <section id="view-loading" class="screen screen-center">
+      <div class="spinner" role="progressbar" aria-label="読み込み中"></div>
+    </section>
+
+    <!-- S03 待機画面（ホーム） -->
+    <section id="view-home" class="screen" hidden>
+      <div class="topbar">
+        <span class="logo">本音<small>HONNE</small></span>
+        <a class="btn btn-ghost btn-small" href="profile.html?edit=name">編集</a>
+      </div>
+
+      <div class="card profile-card">
+        <span id="home-avatar"></span>
+        <div style="flex:1;min-width:0">
+          <p class="profile-name" id="home-name"></p>
+          <p class="muted" id="home-card"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-row">
+          <div style="flex:1">
+            <p class="card-title">自己紹介アンケート</p>
+            <div class="dots" id="home-dots"></div>
+          </div>
+          <a class="btn btn-small" href="profile.html?edit=survey" id="home-survey-btn">回答する</a>
+        </div>
+        <p class="muted" id="home-survey-note" style="margin-top:8px"></p>
+      </div>
+
+      <div id="home-resume" class="card" hidden>
+        <div class="card-row">
+          <div style="flex:1">
+            <p class="card-title">参加中のルームがあります</p>
+            <p class="muted" id="home-resume-code"></p>
+          </div>
+          <a class="btn btn-primary btn-small" id="home-resume-link" href="#">戻る</a>
+        </div>
+      </div>
+
+      <!-- 1対1の挑戦・対戦中の通知 -->
+      <ul id="home-duels" class="member-list" hidden></ul>
+
+      <p class="section-label">遊び方</p>
+
+      <div class="card guide">
+        <span class="guide-icon" aria-hidden="true">♥</span>
+        <div>
+          <p class="card-title">1対1で遊ぶ</p>
+          <p class="muted">相手の個人カードに、あなたのスマホをタッチ。<br>「ワード・スナイパー」か「時限爆弾解除」を選べます。</p>
+        </div>
+      </div>
+
+      <div class="card guide">
+        <span class="guide-icon is-club" aria-hidden="true">♣</span>
+        <div>
+          <p class="card-title">みんなで遊ぶ（3〜6人）</p>
+          <p class="muted">テーブル中央の親カードにスマホをタッチして入室。</p>
+        </div>
+      </div>
+
+      <form id="code-form" class="card" novalidate>
+        <label class="field-label" for="room-code-input">カードが読めないときはルームコードで入室</label>
+        <div class="code-form" style="margin-top:8px">
+          <input id="room-code-input" class="input input-code" inputmode="numeric" pattern="[0-9]{4}"
+                 maxlength="4" placeholder="0000" autocomplete="off">
+          <button type="submit" class="btn btn-primary" id="code-submit" disabled>入室</button>
+        </div>
+      </form>
+
+      <div id="local-tools" class="card" hidden>
+        <p class="card-title">ローカルモードの試遊</p>
+        <p class="muted">NFCカードの代わりに、下のボタンでカードへのタッチを再現できます。</p>
+        <div class="btn-row" style="margin-top:10px">
+          <a class="btn btn-small" href="index.html?card=P-0001">自分のカード</a>
+          <a class="btn btn-small" href="index.html?table=T-0001">親カード</a>
+        </div>
+        <button type="button" class="btn btn-small btn-block" id="local-duel" style="margin-top:10px">テスト相手と1対1で遊ぶ</button>
+      </div>
+    </section>
+
+    <!-- S20 ルームロビー（複数人の待機画面） -->
+    <section id="view-room" class="screen" hidden>
+      <div class="topbar">
+        <button type="button" class="btn btn-ghost" id="room-leave">← 退出</button>
+        <span class="topbar-title">ルームロビー</span>
+        <span style="width:64px"></span>
+      </div>
+
+      <div class="card" style="text-align:center">
+        <p class="muted">ルームコード</p>
+        <p class="room-code" id="room-code">----</p>
+        <p class="muted">親カードをタッチするか、このコードで入室できます</p>
+      </div>
+
+      <div class="member-count">
+        <span class="subtitle">参加者</span>
+        <span><strong id="member-count">0</strong> / 6人</span>
+      </div>
+      <ul class="member-list" id="member-list"></ul>
+      <p class="muted" id="member-status" style="text-align:center"></p>
+
+      <button type="button" class="btn btn-small" id="add-dummy" hidden>＋ テスト用メンバーを追加</button>
+
+      <!-- ホストだけに表示 -->
+      <div id="host-panel" hidden>
+        <p class="section-label" style="margin-bottom:8px">あなたがホストです。モードを選んでください</p>
+        <div class="choices">
+          <button type="button" class="mode-card" data-mode="profileBet">
+            <span class="mode-card-head">
+              <span class="mode-card-emoji" aria-hidden="true">♦</span>
+              <span class="mode-card-title">プロファイル・ベット</span>
+            </span>
+            <span class="mode-card-desc">主役の答えを、質問で探って当てる。主役は順番に交代。</span>
+          </button>
+          <button type="button" class="mode-card" data-mode="anonymous">
+            <span class="mode-card-head">
+              <span class="mode-card-emoji is-spade" aria-hidden="true">♠</span>
+              <span class="mode-card-title">アノニマス・ターゲット</span>
+            </span>
+            <span class="mode-card-desc">きわどい2択に匿名回答。トークで少数派をあぶり出す。</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ホスト以外に表示 -->
+      <div id="guest-panel" class="card waiting" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="guest-message">ホストがモードを選ぶのを待っています</span>
+      </div>
+    </section>
+
+  </main>
+  <script type="module" src="js/lobby.js"></script>
+</body>
+</html>
