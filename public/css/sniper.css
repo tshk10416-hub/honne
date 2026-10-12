@@ -20,64 +20,7 @@
   color: var(--beni);
 }
 
-/* ---------- マッチング ---------- */
-
-.versus {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 8px;
-}
-
-.versus-player {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-
-.versus-name {
-  font-weight: 900;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.versus-state {
-  font-size: 12px;
-  color: var(--ink-soft);
-}
-
-.versus-state.is-ready {
-  color: var(--success);
-  font-weight: 700;
-}
-
-.versus-vs {
-  font-family: var(--font-display);
-  font-size: 22px;
-  color: var(--ink);
-}
-
-.rules-list {
-  margin: 6px 0 0;
-  padding-left: 22px;
-  font-size: 14px;
-  color: var(--ink);
-}
-
-.rules-list li::marker {
-  font-family: var(--font-display);
-  color: var(--beni);
-}
-
-.rules-list li + li {
-  margin-top: 6px;
-}
+/* ---------- マッチング（VS の表示は common.css） ---------- */
 
 /* ---------- ターンの準備 ---------- */
 
@@ -113,11 +56,6 @@
   width: 100%;
   font-family: var(--font-display);
   font-size: 30px;
-}
-
-.btn-big {
-  min-height: 60px;
-  font-size: 20px;
 }
 
 /* ---------- 対戦中 ---------- */
@@ -513,50 +451,6 @@
 
 /* ---------- 結果 ---------- */
 
-.result-hero {
-  position: relative;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding-top: 4px;
-}
-
-/* 朱肉のはんこ */
-.stamp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 108px;
-  height: 108px;
-  border: 5px solid currentColor;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 5px currentColor;
-  color: var(--beni);
-  font-family: var(--font-display);
-  font-size: 56px;
-  line-height: 1;
-  transform: rotate(-10deg);
-  opacity: 0.92;
-  animation: stamp-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-  /* かすれ */
-  -webkit-mask-image: radial-gradient(circle at 30% 70%, transparent 0 3px, #000 4px),
-    radial-gradient(circle at 72% 24%, transparent 0 2px, #000 3px);
-  -webkit-mask-composite: source-in;
-  mask-image: radial-gradient(circle at 30% 70%, transparent 0 3px, #000 4px),
-    radial-gradient(circle at 72% 24%, transparent 0 2px, #000 3px);
-  mask-composite: intersect;
-}
-
-.stamp.is-lose {
-  color: var(--ai);
-}
-
-.stamp.is-draw {
-  color: var(--ink);
-}
-
 .result-score {
   display: flex;
   align-items: center;
@@ -681,10 +575,4 @@
 @keyframes deal {
   from { transform: translate(-12px, -18px) rotate(-4deg); opacity: 0; }
   to { transform: none; opacity: 1; }
-}
-
-@keyframes stamp-in {
-  0% { transform: rotate(-10deg) scale(2.2); opacity: 0; }
-  60% { transform: rotate(-10deg) scale(0.94); opacity: 1; }
-  100% { transform: rotate(-10deg) scale(1); opacity: 0.92; }
 }

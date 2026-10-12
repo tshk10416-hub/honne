@@ -7,7 +7,7 @@
 //   守る人は質問に自然に答えるだけ（わざと避けるのはなし）。言わせたワードの数で勝敗を決める。
 import { signIn, isLocalMode } from './firebase.js';
 import {
-  store, toMillis, attackerOf, SERVER_TIME, TURN_SECONDS, TOTAL_TURNS,
+  store, toMillis, attackerOf, duelModeOf, duelPage, SERVER_TIME, TURN_SECONDS, TOTAL_TURNS,
 } from './store.js';
 import { pickSniperWord } from './topics.js';
 import {
@@ -534,6 +534,11 @@ async function onDuel(duel) {
     showFatal(new Error('この対戦には参加していません。'));
     return;
   }
+  // 時限爆弾解除の対戦は、その画面で開き直す
+  if (duelModeOf(duel) !== 'sniper') {
+    location.replace(`${duelPage(duelModeOf(duel))}?duel=${encodeURIComponent(state.duelId)}`);
+    return;
+  }
   const prevStatus = state.duel?.status;
   state.duel = duel;
   state.opponentId = duel.playerIds.find((id) => id !== state.uid);
@@ -675,7 +680,7 @@ function bindEvents() {
 
   const rejoin = async () => {
     try {
-      await store.enterDuel(state.uid, state.opponentId, state.me);
+      await store.enterDuel(state.uid, state.opponentId, state.me, 'sniper');
     } catch (err) {
       toast(errorMessage(err), 'error');
     }
@@ -710,7 +715,7 @@ async function main() {
       location.replace('lobby.html');
       return;
     }
-    state.duelId = await store.enterDuel(state.uid, opponentId, state.me);
+    state.duelId = await store.enterDuel(state.uid, opponentId, state.me, 'sniper');
     history.replaceState(null, '', `sniper.html?duel=${encodeURIComponent(state.duelId)}`);
   } else {
     state.duelId = params.get('duel');

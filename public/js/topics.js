@@ -1,6 +1,7 @@
 // お題の抽出ロジック（フォールバック込み）。
 // アンケート回答があればそこから、なければプリセット50問から抽選してゲームを止めない。
 import { SURVEY } from './survey.js';
+import { QUIZ } from './quiz.js';
 
 let presetCache = null;
 
@@ -119,4 +120,43 @@ export async function pickAnonymousQuestion(usedRefs = []) {
     source: 'preset',
     ref: `preset:${t.id}`,
   };
+}
+
+// 時限爆弾解除：その人の解除コードになる問題を DEFUSE_DIGITS 問選ぶ（本人の端末で呼ぶ）。
+// 回答済みのアンケートから選び、足りない分は直感2択クイズで補う（クイズは本人がその場で答える）。
+//   codes … 相手の画面に出す問題（答えは含まない）
+//   keys  … アンケートから決まった答え。クイズの分は null（本人の回答待ち）
+export function pickDefuseCode(player, digits) {
+  const survey = player?.survey || {};
+  const fromSurvey = shuffle(answeredQuestions(player)).slice(0, digits).map((q) => ({
+    code: {
+      ref: `survey:${q.id}`,
+      source: 'survey',
+      text: q.text,
+      topic: q.theme,
+      options: { A: q.options.A.label, B: q.options.B.label },
+    },
+    key: survey[q.id],
+  }));
+  const fromQuiz = shuffle(QUIZ).slice(0, digits - fromSurvey.length).map((z) => ({
+    code: {
+      ref: `quiz:${z.id}`,
+      source: 'quiz',
+      text: z.text,
+      topic: z.topic,
+      options: { ...z.options },
+    },
+    key: null,
+  }));
+  const all = shuffle([...fromSurvey, ...fromQuiz]);
+  return { codes: all.map((c) => c.code), keys: all.map((c) => c.key) };
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

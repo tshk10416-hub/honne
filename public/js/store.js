@@ -80,7 +80,7 @@ function deepMerge(target, src) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 1対1モード（ワード・スナイパー）の共通ロジック                        */
+/* 1対1モード（ワード・スナイパー・時限爆弾解除）の共通ロジック          */
 /* ------------------------------------------------------------------ */
 // ターン制：先攻・後攻が交互に攻撃する。1ターンの秒数と、1人あたりの攻撃ターン数
 export const TURN_SECONDS = 90;
@@ -95,6 +95,23 @@ export function attackerOf(duel, turnIndex = duel.turnIndex) {
 // 書き込み時にサーバー時刻（ローカルモードでは端末時刻）へ置き換える目印
 export const SERVER_TIME = '__server_time__';
 
+/* ---------- 時限爆弾解除（ディフューズ・トーク） ---------- */
+// 制限時間と、解除コードの桁数（＝問題の数）。起爆の合図からカウントダウンまでの猶予
+export const DEFUSE_SECONDS = 60;
+export const DEFUSE_DIGITS = 2;
+export const DEFUSE_COUNTDOWN_MS = 3000;
+// 準備のまま動きがない対戦は、次のタッチで作り直す
+const DEFUSE_STALE_MS = 10 * 60 * 1000;
+
+// 1対1のモード（mode がない対戦はワード・スナイパー）
+export const DUEL_MODES = ['sniper', 'defuse'];
+export function duelModeOf(duel) {
+  return duel?.mode === 'defuse' ? 'defuse' : 'sniper';
+}
+export function duelPage(mode) {
+  return mode === 'defuse' ? 'defuse.html' : 'sniper.html';
+}
+
 // 同じ2人の対戦は常に同じドキュメントを使う（どちらがタッチしても合流できる）
 export function duelIdFor(a, b) {
   return `pair_${[a, b].sort().join('_')}`;
@@ -108,22 +125,59 @@ function resolveTime(data, timeValue) {
   return out;
 }
 
+// 時限爆弾解除の新しい対戦（ラウンドごとに作り直す）
+function newDefuseDoc(duel, uid, opponentId, ids, players) {
+  return {
+    mode: 'defuse',
+    playerIds: ids,
+    players,
+    status: 'waiting',
+    round: (duel?.round || 0) + 1,
+    joined: { [uid]: true, [opponentId]: false },
+    startedAt: null,
+    // arming：解除コードの準備 → live：60秒の本番
+    phase: 'arming',
+    timeSec: DEFUSE_SECONDS,
+    codes: {}, // uid → その人の解除コードになる問題（相手の画面に出る）
+    keys: {}, // uid → その人の答え（相手の入力と照合する）
+    armed: { [uid]: false, [opponentId]: false },
+    liveAt: null,
+    inputs: {}, // uid → 解除ボタンを押したときの入力
+    defused: {}, // uid → 解除に成功したか
+    outcome: null, // complete / exploded
+    reason: null, // timeout / wrong
+    failedBy: null,
+    clearMs: null,
+    createdAt: duel?.createdAt || SERVER_TIME,
+    updatedAt: SERVER_TIME,
+  };
+}
+
 // タッチしたときの対戦ドキュメントの変化を決める。
 // 終わった対戦なら新しいラウンドを作り、待機中なら自分を参加済みにして、2人そろえば開始する。
-// 開始すると先攻の「準備」（turnPhase: 'ready'）になり、攻撃する人がスタートを押すとターンが始まる。
-function duelEnterPatch(duel, uid, opponentId, me, opponent) {
+// ワード・スナイパーは先攻の「準備」（turnPhase: 'ready'）から、時限爆弾解除はコードの準備（phase: 'arming'）から始まる。
+// mode が今の待機中の対戦と違うときは、選び直したモードで申し込み直す。
+function duelEnterPatch(duel, uid, opponentId, me, opponent, mode = 'sniper') {
   const ids = [uid, opponentId].sort();
   const players = {
     [uid]: { nickname: me.nickname, color: me.color },
     [opponentId]: { nickname: opponent.nickname, color: opponent.color },
   };
+  const current = duel ? duelModeOf(duel) : null;
   // ターン制になる前に作られた対戦（turnOrder がない）は、作り直す
-  const legacy = duel && !duel.turnOrder;
-  if (!duel || legacy || duel.status === 'finished' || duel.status === 'cancelled') {
+  const legacy = duel && current === 'sniper' && !duel.turnOrder;
+  const otherMode = duel && duel.status === 'waiting' && current !== mode;
+  const staleDefuse = duel && current === 'defuse' && duel.status === 'playing'
+    && Date.now() - toMillis(duel.updatedAt) > DEFUSE_STALE_MS;
+  if (!duel || legacy || otherMode || staleDefuse || duel.status === 'finished' || duel.status === 'cancelled') {
+    if (mode === 'defuse') {
+      return { mode: 'set', data: newDefuseDoc(duel, uid, opponentId, ids, players) };
+    }
     const turnOrder = Math.random() < 0.5 ? [uid, opponentId] : [opponentId, uid];
     return {
       mode: 'set',
       data: {
+        mode: 'sniper',
         playerIds: ids,
         players,
         status: 'waiting',
@@ -366,7 +420,7 @@ const firebaseStore = {
   /* ---------- 1対1モード ---------- */
 
   // 相手の個人カードをタッチしたとき（または挑戦を受けたとき）に呼ぶ。対戦IDを返す。
-  async enterDuel(uid, opponentId, me) {
+  async enterDuel(uid, opponentId, me, mode = 'sniper') {
     const { db, fs } = await getFirebase();
     const oppSnap = await fs.getDoc(fs.doc(db, 'players', opponentId));
     if (!oppSnap.exists()) throw new GameError('PLAYER_NOT_FOUND');
@@ -374,13 +428,19 @@ const firebaseStore = {
     const ref = fs.doc(db, 'duels', duelId);
     await fs.runTransaction(db, async (tx) => {
       const snap = await tx.get(ref);
-      const patch = duelEnterPatch(snap.exists() ? snap.data() : null, uid, opponentId, me, oppSnap.data());
+      const patch = duelEnterPatch(snap.exists() ? snap.data() : null, uid, opponentId, me, oppSnap.data(), mode);
       if (!patch) return;
       const data = resolveTime(patch.data, fs.serverTimestamp());
       if (patch.mode === 'set') tx.set(ref, data);
       else tx.update(ref, data);
     });
     return duelId;
+  },
+
+  async getDuel(duelId) {
+    const { db, fs } = await getFirebase();
+    const snap = await fs.getDoc(fs.doc(db, 'duels', duelId));
+    return snap.exists() ? { id: duelId, ...snap.data({ serverTimestamps: 'estimate' }) } : null;
   },
 
   async watchDuel(duelId, cb) {
@@ -651,12 +711,12 @@ const localStore = {
 
   /* ---------- 1対1モード ---------- */
 
-  async enterDuel(uid, opponentId, me) {
+  async enterDuel(uid, opponentId, me, mode = 'sniper') {
     const db = localLoad();
     const opponent = db.players[opponentId];
     if (!opponent) throw new GameError('PLAYER_NOT_FOUND');
     const duelId = duelIdFor(uid, opponentId);
-    const patch = duelEnterPatch(db.duels[duelId] || null, uid, opponentId, me, opponent);
+    const patch = duelEnterPatch(db.duels[duelId] || null, uid, opponentId, me, opponent, mode);
     if (patch) {
       const data = resolveTime(patch.data, Date.now());
       db.duels[duelId] = patch.mode === 'set' ? data : { ...db.duels[duelId], ...data };
@@ -671,6 +731,11 @@ const localStore = {
       localSave(db);
     }
     return duelId;
+  },
+
+  async getDuel(duelId) {
+    const d = localLoad().duels[duelId];
+    return d ? { id: duelId, ...d } : null;
   },
 
   async watchDuel(duelId, cb) {
