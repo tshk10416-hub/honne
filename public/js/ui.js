@@ -69,7 +69,7 @@ export function showFatal(err) {
   const app = $('#app') || document.body;
   app.innerHTML = `
     <section class="screen screen-center">
-      <div class="big-emoji" aria-hidden="true">💦</div>
+      <div class="big-emoji" aria-hidden="true" style="color:var(--ink-soft)">♣</div>
       <h1 class="title">うまく開けませんでした</h1>
       <p class="muted">${escapeHtml(errorMessage(err))}</p>
       <a class="btn btn-primary btn-block" href="lobby.html">ホームへ戻る</a>

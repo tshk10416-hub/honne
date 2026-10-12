@@ -115,9 +115,8 @@ function renderQuestion() {
     const opt = q.options[key];
     return `
       <button type="button" class="choice" data-key="${key}" aria-pressed="${state.survey[q.id] === key}">
-        <span class="choice-key">${key}</span>
+        <span class="choice-key">${key === 'A' ? '♥' : '♠'}</span>
         <span class="choice-label">${escapeHtml(opt.label)}</span>
-        <span class="choice-emoji" aria-hidden="true">${opt.emoji}</span>
       </button>`;
   }).join('');
   $('#survey-back').style.visibility = state.index === 0 && editMode !== 'survey' && !state.cameFromDone ? 'hidden' : 'visible';

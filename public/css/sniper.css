@@ -1,16 +1,23 @@
 /* =========================================================
    ワード・スナイパー（1対1モード）専用スタイル
+   ワードは紅いトランプ1枚。藍の裏面をめくって確認する。
+   結果は朱肉のはんこで押す。
    ========================================================= */
 
 .sniper-logo {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 2px;
+  padding-top: 6px;
 }
 
-.sniper-logo-icon {
-  font-size: 34px;
+.sniper-logo .title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.2;
+  color: var(--beni);
 }
 
 /* ---------- マッチング ---------- */
@@ -33,7 +40,7 @@
 }
 
 .versus-name {
-  font-weight: 800;
+  font-weight: 900;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -42,7 +49,7 @@
 
 .versus-state {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 
 .versus-state.is-ready {
@@ -51,38 +58,51 @@
 }
 
 .versus-vs {
+  font-family: var(--font-display);
   font-size: 22px;
-  font-weight: 800;
-  color: var(--primary);
+  color: var(--ink);
 }
 
 .rules-list {
-  margin: 4px 0 0;
-  padding-left: 20px;
+  margin: 6px 0 0;
+  padding-left: 22px;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--ink);
+}
+
+.rules-list li::marker {
+  font-family: var(--font-display);
+  color: var(--beni);
 }
 
 .rules-list li + li {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* ---------- ターンの準備 ---------- */
 
 .turn-step {
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: var(--choice-a-soft);
-  color: var(--primary-strong);
+  padding: 2px 12px;
+  border: 1.5px solid var(--ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  padding-left: calc(12px + 0.2em);
+}
+
+#turn-emoji {
+  font-size: 96px;
+}
+
+#turn-emoji.is-defend {
+  color: var(--ai);
 }
 
 .turn-desc {
   max-width: 320px;
   margin: 0 auto;
   text-align: center;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .turn-score {
@@ -91,8 +111,8 @@
   justify-content: center;
   gap: 14px;
   width: 100%;
-  font-size: 26px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 30px;
 }
 
 .btn-big {
@@ -103,25 +123,29 @@
 /* ---------- 対戦中 ---------- */
 
 .turn-banner {
-  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
   border-radius: var(--radius-sm);
-  font-weight: 800;
+  font-weight: 900;
   text-align: center;
-  color: #fff;
+  color: var(--paper);
 }
 
 .turn-banner.is-attack {
-  background: var(--choice-a);
+  background: var(--beni);
 }
 
 .turn-banner.is-defend {
-  background: var(--choice-b);
+  background: var(--ai);
 }
 
 .panel-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .panel-stack[hidden] {
@@ -131,24 +155,47 @@
 .rule-note {
   margin: 0;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-soft);
   text-align: center;
 }
 
 .defend-card {
   text-align: center;
+  border-color: var(--ai);
+  border-width: 2px;
+}
+
+.defend-card .big-emoji {
+  color: var(--ai);
+  font-size: 64px;
+}
+
+.defend-card .card-title {
+  margin-top: 8px;
 }
 
 .defend-card .muted {
-  margin: 6px 0 10px;
-  line-height: 1.6;
+  margin: 6px 0 12px;
+  line-height: 1.7;
 }
 
+.defend-count {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ai-soft);
+  color: var(--ai);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* スコア表：数字は大きく、名前は控えめに */
 .scorebar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px;
+  padding: 10px 12px;
+  border-width: 2px;
 }
 
 .score-side {
@@ -164,14 +211,14 @@
 }
 
 .score-num {
-  font-size: 26px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 30px;
   line-height: 1;
 }
 
 .score-name {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -188,50 +235,58 @@
 .timer {
   flex: 0 0 96px;
   text-align: center;
+  padding: 0 6px;
+  border-left: 1.5px solid var(--rule);
+  border-right: 1.5px solid var(--rule);
 }
 
 .timer-text {
+  font-family: var(--font-display);
   font-size: 30px;
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 
 .timer-progress {
-  height: 6px;
-  margin-top: 4px;
+  height: 5px;
+  margin-top: 6px;
 }
 
 .timer.is-hurry .timer-text {
-  color: var(--danger);
+  color: var(--beni);
   animation: pulse 1s ease-in-out infinite;
 }
 
+/* ---------- ワードカード（紅いトランプ） ---------- */
+
 .word-card {
   position: relative;
-  padding: 18px 16px 14px;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  color: #fff;
-  box-shadow: 0 10px 28px rgba(255, 92, 138, 0.35);
+  padding: 16px 18px 16px;
+  border-radius: 12px;
+  background: var(--beni);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 6px var(--beni),
+    inset 0 0 0 7px rgba(251, 247, 244, 0.45),
+    4px 4px 0 var(--ink);
 }
 
 .word-card.is-new {
-  animation: pop-in 0.4s ease;
+  animation: deal 0.35s ease-out;
 }
 
 .word-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 4px 0;
   font-size: 13px;
   font-weight: 700;
-  opacity: 0.9;
 }
 
 .word-no {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .word-reveal {
@@ -240,24 +295,33 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 96px;
-  margin: 10px 0 6px;
+  min-height: 112px;
+  margin: 10px 0 8px;
+  padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--paper);
   cursor: pointer;
+  perspective: 900px;
+  font: inherit;
+}
+
+.word-reveal:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 3px;
 }
 
 .word-text {
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1.2;
   word-break: keep-all;
   overflow-wrap: anywhere;
   padding: 8px;
 }
 
+/* 裏面：藍の格子。タップで左にめくれる */
 .word-cover {
   position: absolute;
   inset: 0;
@@ -265,29 +329,47 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   border-radius: inherit;
-  background: rgba(40, 20, 40, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-weight: 800;
+  border: 2px solid var(--paper);
+  background-color: var(--ai);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(251, 247, 244, 0.16) 0 2px, transparent 2px 10px),
+    repeating-linear-gradient(-45deg, rgba(251, 247, 244, 0.16) 0 2px, transparent 2px 10px);
+  color: var(--paper);
+  font-weight: 900;
   font-size: 17px;
   line-height: 1.4;
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.45s ease;
+  backface-visibility: hidden;
+}
+
+.word-cover-label {
+  padding: 4px 14px;
+  border-radius: 4px;
+  background: var(--ai);
 }
 
 .word-cover small {
+  padding: 0 10px;
+  border-radius: 4px;
+  background: var(--ai);
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.85;
 }
 
 .word-reveal[aria-pressed='true'] .word-cover {
-  display: none;
+  transform: rotateY(-180deg);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .word-hint {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.18);
+  padding: 12px 12px 10px;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -297,53 +379,44 @@
 }
 
 .word-hint-title {
-  font-weight: 800;
-  opacity: 0.95;
+  font-weight: 900;
+  color: var(--beni-deep);
 }
 
 .question-list {
-  margin: 6px 0 8px;
+  margin: 8px 0 8px;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .question-list li {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #3a2a33;
+  position: relative;
+  padding: 8px 4px;
+  border-top: 1px dashed var(--rule);
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .word-hint-answer {
   font-size: 12px;
-  opacity: 0.9;
+  color: var(--ink-soft);
 }
 
 .word-hint-closed {
   margin: 0;
+  padding: 0 4px;
   font-size: 12px;
-  opacity: 0.85;
 }
 
-.defend-count {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--choice-b-soft);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
-}
+/* ---------- SHOT / パス ---------- */
 
 .action-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 12px;
 }
 
@@ -352,47 +425,51 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 96px;
+  gap: 2px;
+  min-height: 92px;
   padding: 12px 8px;
-  border: 0;
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
-  color: #fff;
+  font-family: var(--font);
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.08s ease, opacity 0.2s ease;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
 }
 
 .btn-action:active {
-  transform: scale(0.96);
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--ink);
 }
 
 .btn-action:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
 .btn-action-main {
-  font-size: 19px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 900;
 }
 
 .btn-action-sub {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  opacity: 0.9;
 }
 
 .btn-shot {
-  background: var(--choice-a);
-  box-shadow: 0 8px 20px rgba(255, 122, 154, 0.4);
+  background: var(--beni);
+  color: var(--paper);
 }
 
 .btn-pass {
-  background: #9a8a94;
-  box-shadow: 0 8px 20px rgba(90, 70, 80, 0.25);
+  background: var(--paper);
+  color: var(--ink);
 }
+
+/* ---------- ログ ---------- */
 
 .log-list {
   list-style: none;
@@ -400,46 +477,92 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 .log-item,
 .log-empty {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--rule);
   font-size: 14px;
+}
+
+.log-item {
   animation: pop-in 0.3s ease;
 }
 
+.log-item.is-shot {
+  font-weight: 700;
+}
+
+.log-item.is-shot::before {
+  content: '♥ ';
+  color: var(--beni);
+}
+
 .log-empty {
-  color: var(--muted);
+  color: var(--ink-soft);
   text-align: center;
 }
 
 .log-time {
   float: right;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- 結果 ---------- */
 
 .result-hero {
+  position: relative;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+/* 朱肉のはんこ */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 108px;
+  height: 108px;
+  border: 5px solid currentColor;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 5px currentColor;
+  color: var(--beni);
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 1;
+  transform: rotate(-10deg);
+  opacity: 0.92;
+  animation: stamp-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  /* かすれ */
+  -webkit-mask-image: radial-gradient(circle at 30% 70%, transparent 0 3px, #000 4px),
+    radial-gradient(circle at 72% 24%, transparent 0 2px, #000 3px);
+  -webkit-mask-composite: source-in;
+  mask-image: radial-gradient(circle at 30% 70%, transparent 0 3px, #000 4px),
+    radial-gradient(circle at 72% 24%, transparent 0 2px, #000 3px);
+  mask-composite: intersect;
+}
+
+.stamp.is-lose {
+  color: var(--ai);
+}
+
+.stamp.is-draw {
+  color: var(--ink);
 }
 
 .result-score {
   display: flex;
   align-items: center;
   gap: 16px;
-  font-size: 34px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 36px;
 }
 
 .result-score .avatar {
@@ -452,17 +575,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .word-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .word-item-body {
@@ -471,28 +591,30 @@
 }
 
 .word-item-word {
-  font-weight: 800;
-  font-size: 17px;
+  font-weight: 900;
+  font-size: 18px;
 }
 
 .word-item-source {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 
 .word-item-empty {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
   padding: 4px 2px;
 }
 
 .badge-shot {
-  background: var(--choice-a-soft);
-  color: var(--primary-strong);
+  background: var(--beni);
+  border-color: var(--beni);
+  color: var(--paper);
 }
 
 .talk-card {
-  background: var(--surface-2);
+  background: var(--paper-2);
+  border-style: dashed;
 }
 
 /* ---------- モーダル・演出 ---------- */
@@ -504,7 +626,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(30, 10, 20, 0.45);
+  background: rgba(47, 11, 29, 0.6);
   animation: fade-in 0.2s ease;
 }
 
@@ -515,8 +637,9 @@
   width: 100%;
   max-width: 480px;
   padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
-  border-radius: 24px 24px 0 0;
-  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  border-top: 3px solid var(--beni);
+  background: var(--paper);
   text-align: center;
 }
 
@@ -527,15 +650,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 92, 138, 0.9);
+  background: var(--beni);
   pointer-events: none;
 }
 
 .start-text {
+  font-family: var(--font-display);
   font-size: 64px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.08em;
+  color: var(--paper);
   animation: zoom-in 0.9s ease forwards;
 }
 
@@ -548,4 +670,21 @@
   0% { transform: scale(0.4); opacity: 0; }
   40% { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 山札から配られる */
+@keyframes deal {
+  from { transform: translate(-12px, -18px) rotate(-4deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes stamp-in {
+  0% { transform: rotate(-10deg) scale(2.2); opacity: 0; }
+  60% { transform: rotate(-10deg) scale(0.94); opacity: 1; }
+  100% { transform: rotate(-10deg) scale(1); opacity: 0.92; }
 }
