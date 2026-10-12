@@ -1,5 +1,5 @@
 // S00 エントリー（ルーター）
-//   ?card=P-xxxx   個人カード：自分のカードなら登録してホームへ、他人のカードなら1対1モードへ
+//   ?card=P-xxxx   個人カード：自分のカードなら登録してホームへ、他人のカードなら1対1のモード選択へ
 //   ?table=T-xxxx  親カード：複数人ルームへ入室
 //   ?room=1234     ルームコードで入室（NFC非対応端末用）
 //   パラメータなし  ホーム（待機画面）へ
@@ -36,8 +36,8 @@ async function main() {
     if (ownerId === uid) {
       location.replace(`lobby.html${claimed ? '?linked=1' : ''}`);
     } else {
-      // 他人のカード → 1対1モード（ワード・スナイパー）の対戦申し込み（ステップ3で実装）
-      location.replace(`sniper.html?opponent=${encodeURIComponent(ownerId)}`);
+      // 他人のカード → 1対1のモード選択（ワード・スナイパー／時限爆弾解除）
+      location.replace(`versus.html?opponent=${encodeURIComponent(ownerId)}`);
     }
     return;
   }

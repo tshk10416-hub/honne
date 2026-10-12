@@ -4,7 +4,7 @@
 //   lobby.html?room=xxx    ルームロビー
 import { signIn, isLocalMode } from './firebase.js';
 import {
-  store, toMillis, countAnswered, MIN_MEMBERS, MAX_MEMBERS, ONLINE_TIMEOUT_MS,
+  store, toMillis, countAnswered, duelModeOf, duelPage, MIN_MEMBERS, MAX_MEMBERS, ONLINE_TIMEOUT_MS,
 } from './store.js';
 import { SURVEY } from './survey.js';
 import {
@@ -15,6 +15,7 @@ const params = new URLSearchParams(location.search);
 const HEARTBEAT_MS = 30 * 1000;
 const INVITE_TTL_MS = 10 * 60 * 1000;
 const PLAYING_TTL_MS = 10 * 60 * 1000;
+const DUEL_MODE_NAMES = { sniper: 'ワード・スナイパー', defuse: '時限爆弾解除' };
 
 // ゲーム中の画面（ステップ4以降で実装）
 const MODE_PAGES = {
@@ -77,12 +78,14 @@ function renderDuels(duels) {
       const oppId = d.playerIds.find((id) => id !== uid);
       const opp = d.players?.[oppId] || { nickname: '相手' };
       const fresh = now - toMillis(d.updatedAt) < INVITE_TTL_MS;
+      const modeName = DUEL_MODE_NAMES[duelModeOf(d)];
       if (d.status === 'waiting' && !d.joined?.[uid] && fresh) {
-        return { d, opp, text: `${opp.nickname}さんから1対1の挑戦が届いています`, action: '見る' };
+        return { d, opp, text: `${opp.nickname}さんから「${modeName}」の挑戦が届いています`, action: '見る' };
       }
       // ターン制なので終わりの時刻は決まっていない。しばらく動きのない対戦は表示しない
-      if (d.status === 'playing' && d.turnOrder && now - toMillis(d.updatedAt) < PLAYING_TTL_MS) {
-        return { d, opp, text: `${opp.nickname}さんと対戦中です`, action: '戻る' };
+      const current = d.turnOrder || duelModeOf(d) === 'defuse';
+      if (d.status === 'playing' && current && now - toMillis(d.updatedAt) < PLAYING_TTL_MS) {
+        return { d, opp, text: `${opp.nickname}さんと「${modeName}」の対戦中です`, action: '戻る' };
       }
       return null;
     })
@@ -93,7 +96,7 @@ function renderDuels(duels) {
     <li class="member">
       ${avatarHtml(opp, 'sm')}
       <span class="member-name" style="white-space:normal">${escapeHtml(text)}</span>
-      <a class="btn btn-primary btn-small" href="sniper.html?duel=${encodeURIComponent(d.id)}">${action}</a>
+      <a class="btn btn-primary btn-small" href="${duelPage(duelModeOf(d))}?duel=${encodeURIComponent(d.id)}">${action}</a>
     </li>`).join('');
 }
 
@@ -136,7 +139,7 @@ async function initHome() {
   $('#local-duel').addEventListener('click', async () => {
     try {
       const dummyId = await store.createDummyOpponent();
-      location.href = `sniper.html?opponent=${encodeURIComponent(dummyId)}`;
+      location.href = `versus.html?opponent=${encodeURIComponent(dummyId)}`;
     } catch (err) {
       toast(errorMessage(err), 'error');
     }
