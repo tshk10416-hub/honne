@@ -1,7 +1,7 @@
 // S09 1対1のモード選択
 //   versus.html?opponent=<uid>  相手の個人カードをタッチしたとき
 // 相手から挑戦が届いていればそれを受けられるようにし、なければモードを選んで申し込む。
-// 申し込み・参加は各モードの画面（sniper.html / defuse.html）が ?opponent= で行う。
+// 申し込み・参加は各モードの画面（sniper.html / defuse.html / bet.html）が ?opponent= で行う。
 import { signIn } from './firebase.js';
 import {
   store, toMillis, duelIdFor, duelModeOf, duelPage, GameError,
@@ -12,7 +12,7 @@ import {
 
 const params = new URLSearchParams(location.search);
 const FRESH_MS = 10 * 60 * 1000;
-const MODE_NAMES = { sniper: 'ワード・スナイパー', defuse: '時限爆弾解除' };
+const MODE_NAMES = { sniper: 'ワード・スナイパー', defuse: '時限爆弾解除', bet: 'ステータス・ベット' };
 
 function versusHtml(player, label) {
   return `

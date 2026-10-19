@@ -103,13 +103,20 @@ export const DEFUSE_COUNTDOWN_MS = 3000;
 // 準備のまま動きがない対戦は、次のタッチで作り直す
 const DEFUSE_STALE_MS = 10 * 60 * 1000;
 
+/* ---------- ステータス・ベット（初対面の印象ギャンブル） ---------- */
+// 最初の持ちコイン、1対1のラウンド数、賭け金のボタン（ALL IN は別）
+export const BET_START_COINS = 1000;
+export const BET_DUEL_TURNS = 3;
+export const BET_STAKES = [100, 300, 500];
+
 // 1対1のモード（mode がない対戦はワード・スナイパー）
-export const DUEL_MODES = ['sniper', 'defuse'];
+export const DUEL_MODES = ['sniper', 'defuse', 'bet'];
+const DUEL_PAGES = { sniper: 'sniper.html', defuse: 'defuse.html', bet: 'bet.html' };
 export function duelModeOf(duel) {
-  return duel?.mode === 'defuse' ? 'defuse' : 'sniper';
+  return DUEL_MODES.includes(duel?.mode) ? duel.mode : 'sniper';
 }
 export function duelPage(mode) {
-  return mode === 'defuse' ? 'defuse.html' : 'sniper.html';
+  return DUEL_PAGES[mode] || DUEL_PAGES.sniper;
 }
 
 // 同じ2人の対戦は常に同じドキュメントを使う（どちらがタッチしても合流できる）
@@ -117,12 +124,30 @@ export function duelIdFor(a, b) {
   return `pair_${[a, b].sort().join('_')}`;
 }
 
+function isPlainObject(v) {
+  return v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
+}
+
+// SERVER_TIME の目印をサーバー時刻に置き換える（入れ子のオブジェクトの中も。配列の中は対象外）
 function resolveTime(data, timeValue) {
   const out = {};
   Object.entries(data).forEach(([k, v]) => {
-    out[k] = v === SERVER_TIME ? timeValue : v;
+    if (v === SERVER_TIME) out[k] = timeValue;
+    else if (isPlainObject(v)) out[k] = resolveTime(v, timeValue);
+    else out[k] = v;
   });
   return out;
+}
+
+// "a.b.c" のような区切りのキーで、入れ子のオブジェクトに値を入れる（ローカルモード用）
+function setPath(obj, path, value) {
+  const keys = path.split('.');
+  let cur = obj;
+  keys.slice(0, -1).forEach((k) => {
+    if (!isPlainObject(cur[k])) cur[k] = {};
+    cur = cur[k];
+  });
+  cur[keys[keys.length - 1]] = value;
 }
 
 // 時限爆弾解除の新しい対戦（ラウンドごとに作り直す）
@@ -153,6 +178,31 @@ function newDefuseDoc(duel, uid, opponentId, ids, players) {
   };
 }
 
+// ステータス・ベット（1対1）の新しい対戦。3ラウンドとも、2人がお互いの問いに賭ける。
+//   turns   … tN → { targets: [uid], questions: { uid: 問い }, needsStance: { uid: true/false } }
+//   answers … tN → { uid: 'A' / 'B' }（アンケートの答え、または本人がこっそり選んだ答え）
+//   bets    … tN → { 賭けた人の uid: { target, pick, amount } }
+function newBetDoc(duel, uid, opponentId, ids, players) {
+  return {
+    mode: 'bet',
+    playerIds: ids,
+    players,
+    status: 'waiting',
+    round: (duel?.round || 0) + 1,
+    joined: { [uid]: true, [opponentId]: false },
+    startedAt: null,
+    totalTurns: BET_DUEL_TURNS,
+    turnIndex: -1,
+    phase: null,
+    phaseAt: null,
+    turns: {},
+    answers: {},
+    bets: {},
+    createdAt: duel?.createdAt || SERVER_TIME,
+    updatedAt: SERVER_TIME,
+  };
+}
+
 // タッチしたときの対戦ドキュメントの変化を決める。
 // 終わった対戦なら新しいラウンドを作り、待機中なら自分を参加済みにして、2人そろえば開始する。
 // ワード・スナイパーは先攻の「準備」（turnPhase: 'ready'）から、時限爆弾解除はコードの準備（phase: 'arming'）から始まる。
@@ -167,11 +217,14 @@ function duelEnterPatch(duel, uid, opponentId, me, opponent, mode = 'sniper') {
   // ターン制になる前に作られた対戦（turnOrder がない）は、作り直す
   const legacy = duel && current === 'sniper' && !duel.turnOrder;
   const otherMode = duel && duel.status === 'waiting' && current !== mode;
-  const staleDefuse = duel && current === 'defuse' && duel.status === 'playing'
+  const stale = duel && (current === 'defuse' || current === 'bet') && duel.status === 'playing'
     && Date.now() - toMillis(duel.updatedAt) > DEFUSE_STALE_MS;
-  if (!duel || legacy || otherMode || staleDefuse || duel.status === 'finished' || duel.status === 'cancelled') {
+  if (!duel || legacy || otherMode || stale || duel.status === 'finished' || duel.status === 'cancelled') {
     if (mode === 'defuse') {
       return { mode: 'set', data: newDefuseDoc(duel, uid, opponentId, ids, players) };
+    }
+    if (mode === 'bet') {
+      return { mode: 'set', data: newBetDoc(duel, uid, opponentId, ids, players) };
     }
     const turnOrder = Math.random() < 0.5 ? [uid, opponentId] : [opponentId, uid];
     return {
@@ -360,7 +413,7 @@ const firebaseStore = {
   async watchRoom(roomId, cb) {
     const { db, fs } = await getFirebase();
     return fs.onSnapshot(fs.doc(db, 'rooms', roomId), (snap) => {
-      cb(snap.exists() ? { id: roomId, ...snap.data() } : null);
+      cb(snap.exists() ? { id: roomId, ...snap.data({ serverTimestamps: 'estimate' }) } : null);
     });
   },
 
@@ -413,8 +466,29 @@ const firebaseStore = {
         turnIndex: 0,
         roundNo: 0,
         currentRoundId: null,
+        bet: null,
       });
     });
+  },
+
+  // ホストがルームの進行を書き込む。fn(現在のルーム) が返した差分をトランザクションで書き込む（null なら何もしない）
+  async updateRoom(roomId, fn) {
+    const { db, fs } = await getFirebase();
+    const ref = fs.doc(db, 'rooms', roomId);
+    return fs.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw new GameError('ROOM_NOT_FOUND');
+      const patch = fn({ id: roomId, ...snap.data() });
+      if (!patch) return false;
+      tx.update(ref, resolveTime(patch, fs.serverTimestamp()));
+      return true;
+    });
+  },
+
+  // 自分のメンバー情報に書き込む。キーは "a.b.c" の形で入れ子の場所を指定できる
+  async updateMember(roomId, uid, patch) {
+    const { db, fs } = await getFirebase();
+    await fs.updateDoc(fs.doc(db, 'rooms', roomId, 'members', uid), resolveTime(patch, fs.serverTimestamp()));
   },
 
   /* ---------- 1対1モード ---------- */
@@ -694,7 +768,27 @@ const localStore = {
       turnIndex: 0,
       roundNo: 0,
       currentRoundId: null,
+      bet: null,
     });
+    localSave(db);
+  },
+
+  async updateRoom(roomId, fn) {
+    const db = localLoad();
+    const room = db.rooms[roomId];
+    if (!room) throw new GameError('ROOM_NOT_FOUND');
+    const patch = fn({ id: roomId, ...room });
+    if (!patch) return false;
+    Object.assign(room, resolveTime(patch, Date.now()));
+    localSave(db);
+    return true;
+  },
+
+  async updateMember(roomId, uid, patch) {
+    const db = localLoad();
+    const member = db.members[roomId]?.[uid];
+    if (!member) throw new GameError('ROOM_NOT_FOUND');
+    Object.entries(resolveTime(patch, Date.now())).forEach(([path, value]) => setPath(member, path, value));
     localSave(db);
   },
 
