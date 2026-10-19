@@ -124,7 +124,7 @@ export async function pickAnonymousQuestion(usedRefs = []) {
 
 // 時限爆弾解除：その人の解除コードになる問題を DEFUSE_DIGITS 問選ぶ（本人の端末で呼ぶ）。
 // 回答済みのアンケートから選び、足りない分は直感2択クイズで補う（クイズは本人がその場で答える）。
-//   codes … 相手の画面に出す問題（答えは含まない）
+//   codes … 相手の画面に出す問題（答えは含まない）。お題をそのまま聞くのは禁止なので、遠回しな質問の例（examples）も付ける
 //   keys  … アンケートから決まった答え。クイズの分は null（本人の回答待ち）
 export function pickDefuseCode(player, digits) {
   const survey = player?.survey || {};
@@ -135,6 +135,8 @@ export function pickDefuseCode(player, digits) {
       text: q.text,
       topic: q.theme,
       options: { A: q.options.A.label, B: q.options.B.label },
+      // 遠回しな質問の例（並びはランダムで、画面には1つ目を出す）
+      examples: shuffle(q.defuseHints || []),
     },
     key: survey[q.id],
   }));
@@ -145,6 +147,7 @@ export function pickDefuseCode(player, digits) {
       text: z.text,
       topic: z.topic,
       options: { ...z.options },
+      examples: z.hint ? [z.hint] : [],
     },
     key: null,
   }));

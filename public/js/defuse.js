@@ -154,8 +154,8 @@ function renderArming() {
   const needsQuiz = codes.some((c) => c.source === 'quiz');
 
   $('#arm-desc').textContent = needsQuiz
-    ? 'アンケートの回答が足りない分は、直感クイズになりました。いまの気分で答えを選んでください。その答えが、相手が当てる解除コードになります。'
-    : `この${codes.length || DEFUSE_DIGITS}問の答えが、あなたの解除コードです。${nameOf(opponentId)}さんがあなたに質問して、答えを当てにきます。正直に答えてね。`;
+    ? 'アンケートの回答が足りない分は、直感クイズになりました。いまの気分で答えを選んでください。その答えが、相手が当てる解除コードになります。相手は遠回しな質問で探ってくるので、選択肢の言葉は使わず、自分の言葉で正直に答えてね。'
+    : `この${codes.length || DEFUSE_DIGITS}問の答えが、あなたの解除コードです。${nameOf(opponentId)}さんは、お題をそのまま聞かずに遠回しな質問で答えを探ってきます。選択肢の言葉は使わず、自分の言葉で正直に答えてね。`;
 
   if (!codes.length) {
     $('#arm-codes').innerHTML = '<li class="code-item"><div class="waiting"><div class="spinner" aria-hidden="true"></div>コードを作っています</div></li>';
@@ -251,7 +251,7 @@ function renderPanels() {
   $('#live-panels').innerHTML = codes.map((c, i) => `
     <div class="panel${state.inputs[i] ? ' is-set' : ''}">
       <p class="panel-head"><span class="panel-no">コード${i + 1}</span><span class="panel-topic">${escapeHtml(c.topic)}</span></p>
-      <p class="panel-q">${escapeHtml(c.text)}</p>
+      ${c.examples?.length ? `<p class="panel-hint"><span class="panel-hint-tag">ヒント</span>${escapeHtml(c.examples[0])}</p>` : ''}
       <div class="panel-keys" role="group" aria-label="コード${i + 1}">
         ${KEYS.map((k) => `
           <button type="button" class="key-btn is-${k}" data-index="${i}" data-key="${k}"

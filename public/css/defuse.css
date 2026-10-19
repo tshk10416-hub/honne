@@ -223,8 +223,8 @@ body.is-live {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 6px 12px;
+  gap: 4px;
+  padding: 4px 6px 10px;
   border-bottom: 1.5px dashed var(--bomb-line);
 }
 
@@ -301,7 +301,7 @@ body.is-critical .bomb-timer {
 .panel-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .panel {
@@ -333,10 +333,43 @@ body.is-critical .bomb-timer {
   font-weight: 900;
 }
 
-.panel-q {
-  margin: 2px 0 10px;
+.panel-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: rgba(251, 247, 244, 0.85);
+}
+
+.panel-hint-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--led-soft);
+}
+
+/* 直接聞くのは禁止（画面に1回だけ） */
+.bomb-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 0;
   font-size: 13px;
-  color: rgba(251, 247, 244, 0.7);
+  font-weight: 700;
+  color: rgba(251, 247, 244, 0.8);
+}
+
+.bomb-rule-tag {
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--led);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .panel-keys {
@@ -352,8 +385,8 @@ body.is-critical .bomb-timer {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 108px;
-  padding: 10px 6px;
+  min-height: 92px;
+  padding: 8px 6px;
   border: 2.5px solid currentColor;
   border-radius: 12px;
   background: transparent;
@@ -386,7 +419,7 @@ body.is-critical .bomb-timer {
 
 .key-btn-mark {
   font-family: var(--font-display);
-  font-size: 38px;
+  font-size: 32px;
   line-height: 1;
 }
 
@@ -505,6 +538,18 @@ body.is-critical .bomb-timer {
   font-weight: 900;
   letter-spacing: 0.3em;
   color: var(--led-soft);
+}
+
+.countdown-rule {
+  order: 3;
+  margin: 12px 24px 0;
+  padding: 6px 14px;
+  border: 2px solid var(--led);
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--paper);
+  text-align: center;
 }
 
 .countdown-num {

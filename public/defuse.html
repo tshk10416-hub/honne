@@ -62,6 +62,7 @@
         <ol class="rules-list">
           <li>爆弾の解除コードは、<strong>相手のアンケートの答え</strong>2つです。</li>
           <li>起爆したら<strong id="rules-sec">60</strong>秒。お互いに大急ぎで質問して、相手の答えを聞き出します。</li>
+          <li><strong>直接聞くのは禁止。</strong>お題をそのまま聞いたり、選択肢を読み上げたりせず、遠回しな質問で探ります。答える側も、選択肢の言葉は使わずに自分の言葉で答えます。</li>
           <li>聞き出した答えを <strong>A／B</strong> で入力して、<strong>解除</strong>を押します。</li>
           <li>2人とも解除できたら成功。1つでも間違えるか、時間切れで爆発です。</li>
         </ol>
@@ -103,6 +104,8 @@
         <div class="bomb-fuse" aria-hidden="true"><div class="bomb-fuse-bar" id="live-fuse"></div></div>
         <p class="bomb-partner" id="live-partner"></p>
       </div>
+
+      <p class="bomb-rule"><span class="bomb-rule-tag">NG</span>お題をそのまま聞く・選択肢を読み上げる</p>
 
       <div class="panel-list" id="live-panels"></div>
 
@@ -163,6 +166,7 @@
   <div class="countdown" id="countdown" hidden>
     <p class="countdown-label">起爆まで</p>
     <div class="countdown-num" id="countdown-num">3</div>
+    <p class="countdown-rule">お題をそのまま聞くのは禁止！</p>
   </div>
 
   <!-- 爆発 -->
