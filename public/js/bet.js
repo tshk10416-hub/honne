@@ -1,10 +1,11 @@
-// S30 マッチング / S31 お題提示 / S32 尋問 / S33 ベット / S34 ショーダウン / S35 ギャップ・トーク / S36 最終結果
+// S30 マッチング / S35 開始画面 / S31 お題提示 / S32 尋問 / S33 ベット / S34 ショーダウン / S36 最終結果
 //   bet.html?opponent=<uid>  1対1：モード選択で「ステータス・ベット」を選んだとき（対戦に参加して ?duel= に置き換える）
 //   bet.html?duel=<duelId>   1対1：挑戦の受諾・再読み込み・もう一度
 //   bet.html?room=<roomId>   複数人（3〜6人）：ホストがロビーで「ステータス・ベット」を選んだとき
 //
-// 全員1,000コインから。1ターンの流れ（約90秒）：
-//   お題提示（10秒）→ 尋問タイム（45秒）→ ベット（15秒）→ ショーダウン → ギャップ・トーク（20秒＋「次のラウンドへ」）
+// 全員1,000コインから。開始画面で全員が「準備OK」を押したらスタート。1ターンの流れ：
+//   お題提示（全員が「始める」を押すまで）→ 尋問タイム（60秒）→ ベット（15秒）
+//   → ショーダウン（当たり外れを見て「次のラウンドへ」を押すまで）
 //   1対1  … 全3ラウンド。毎ラウンド2人ともお題が出て、お互いに相手のお題に賭ける。
 //   複数人 … 主役が1人ずつ交代（全員が1回ずつ主役）。主役以外の全員が、主役の答えに賭ける。
 //   当たれば賭け金の2倍が戻り（＋賭け金）、外れたら賭け金を失う。ALL IN は持ちコインすべて。
@@ -31,18 +32,18 @@ import {
 const params = new URLSearchParams(location.search);
 const KEYS = ['A', 'B'];
 const SUITS = { A: '♥', B: '♠' };
-const PHASES = ['setup', 'talk', 'bet', 'showdown', 'gap'];
+const PHASES = ['setup', 'talk', 'bet', 'showdown'];
 const PHASE_NAMES = {
   setup: 'お題提示',
   talk: '尋問タイム',
   bet: 'ベット',
   showdown: 'ショーダウン',
-  gap: 'ギャップ・トーク',
 };
-// 各フェーズの秒数（ギャップ・トークは目安。「次のラウンドへ」を押すまで続く）
+// 時間制限のあるフェーズの秒数（お題提示とショーダウンは、ボタンを押すまで待つ）
 const DURATION = {
-  setup: 10, talk: 45, bet: 15, showdown: 6, gap: 20,
+  talk: 60, bet: 15,
 };
+const START_KEY = 'start'; // 開始画面の「準備OK」の記録に使うキー
 const STANCE_MS = 3000; // こっそり選ぶ制限時間
 const DRUM_MS = 2400; // ショーダウン：ドラムロールのあと答えのカードがめくれる
 const VERDICT_MS = 3000; // ショーダウン：当たり外れとコインの増減を出す
@@ -74,7 +75,7 @@ const state = {
 /* 共通                                                                */
 /* ------------------------------------------------------------------ */
 
-const VIEWS = ['loading', 'waiting', 'play', 'final', 'cancelled'];
+const VIEWS = ['loading', 'waiting', 'start', 'play', 'final', 'cancelled'];
 function showView(name) {
   VIEWS.forEach((v) => show($(`#view-${v}`), v === name));
 }
@@ -151,6 +152,8 @@ function normalizeDuel(d) {
     turns: d.turns || {},
     answers: d.answers || {},
     bets: d.bets || {},
+    ready: d.ready || {},
+    members: d.playerIds,
     driver: true, // 1対1は2人とも進行を書き込める（同時に書いてもトランザクションで1回になる）
   };
 }
@@ -172,6 +175,14 @@ function normalizeRoom(room, members) {
   });
   const answers = {};
   const bets = {};
+  // 開始画面とお題提示の「準備OK」（ラウンドごと）
+  const ready = {};
+  members.forEach((m) => {
+    Object.entries(m.betPlays?.[b.gameId]?.ready || {}).forEach(([key, v]) => {
+      if (!v) return;
+      ready[key] = { ...(ready[key] || {}), [m.id]: true };
+    });
+  });
   Object.entries(b.turns || {}).forEach(([key, turn]) => {
     answers[key] = { ...(b.answers?.[key] || {}) };
     bets[key] = { ...(b.bets?.[key] || {}) };
@@ -200,6 +211,9 @@ function normalizeRoom(room, members) {
     turns: b.turns || {},
     answers,
     bets,
+    ready,
+    // ルームから抜けた人は、準備OKを待たない
+    members: b.order.filter((id) => room.memberIds.includes(id)),
     driver: room.hostId === state.uid, // 複数人はホストだけが進行を書き込める
   };
 }
@@ -227,7 +241,7 @@ function bettorsOf(G, t) {
 // 答えが公開済み（コインの計算に入れる）の最後のターン
 function settledUpTo(G) {
   if (G.status === 'finished') return G.turnIndex;
-  if (G.phase === 'showdown' || G.phase === 'gap') return G.turnIndex;
+  if (G.phase === 'showdown') return G.turnIndex;
   return G.turnIndex - 1;
 }
 
@@ -276,6 +290,11 @@ function allBet(G, t) {
     .every(({ bettor }) => !!G.bets[key]?.[bettor]);
 }
 
+// key（開始画面は 'start'、お題提示は 'tN'）で、全員が準備OKを押したか
+function allReady(G, key) {
+  return G.members.every((id) => !!G.ready[key]?.[id]);
+}
+
 /* ------------------------------------------------------------------ */
 /* 書き込み                                                            */
 /* ------------------------------------------------------------------ */
@@ -308,7 +327,7 @@ function usedRefsFor(G, id, picked) {
 async function startTurn(t) {
   const G = state.G;
   if (t >= G.totalTurns) {
-    await writeGame((g) => (g.status === 'playing' && g.turnIndex === t - 1 && g.phase === 'gap'
+    await writeGame((g) => (g.status === 'playing' && g.turnIndex === t - 1 && g.phase === 'showdown'
       ? { status: 'finished', phase: null, phaseAt: SERVER_TIME }
       : null));
     return;
@@ -330,7 +349,7 @@ async function startTurn(t) {
   const key = tKey(t);
   await writeGame((g) => {
     if (g.status !== 'playing' || (g.turnIndex ?? -1) !== t - 1) return null;
-    if (t > 0 && g.phase !== 'gap') return null;
+    if (t > 0 && g.phase !== 'showdown') return null;
     return {
       turnIndex: t,
       phase: 'setup',
@@ -355,6 +374,30 @@ function advancePhase(t, from, to) {
     }
     return patch;
   });
+}
+
+// 準備OK（開始画面）・始める（お題提示）の記録
+function setReady(actorId, key) {
+  if (state.kind === 'duel') {
+    return store.updateDuel(state.id, (d) => {
+      if (d.status !== 'playing' || d.ready?.[key]?.[actorId]) return null;
+      return { ready: { ...(d.ready || {}), [key]: { ...(d.ready?.[key] || {}), [actorId]: true } } };
+    });
+  }
+  return store.updateMember(state.id, actorId, { [`betPlays.${state.G.gameId}.ready.${key}`]: true });
+}
+
+function pressReady() {
+  const G = state.G;
+  if (!G || G.status !== 'playing') return;
+  const key = G.turnIndex < 0 ? START_KEY : tKey(G.turnIndex);
+  if (G.turnIndex >= 0 && (G.phase !== 'setup' || myStanceTurn(G))) return;
+  vibrate(30);
+  act(`ready:${G.gameId}:${key}`, async () => {
+    await setReady(state.uid, key);
+    render();
+  }, true);
+  render();
 }
 
 // 主役がこっそり選んだ答え（actorId は本人、ローカルモードではテスト相手のこともある）
@@ -436,8 +479,9 @@ function shuffle(arr) {
 
 function drive(G, now) {
   if (!G.driver || G.status !== 'playing') return;
+  // 開始画面：全員が準備OKを押したら1ラウンド目へ
   if (G.turnIndex < 0 || !G.phase) {
-    act(`start:${G.gameId}:0`, () => startTurn(0));
+    if (allReady(G, START_KEY)) act(`start:${G.gameId}:0`, () => startTurn(0));
     return;
   }
   // 書き込み直後でサーバー時刻がまだ届いていないときは待つ
@@ -445,20 +489,19 @@ function drive(G, now) {
   const t = G.turnIndex;
   const elapsed = now - G.phaseAt;
   const k = `adv:${G.gameId}:${t}:${G.phase}`;
-  if (G.phase === 'setup' && elapsed >= DURATION.setup * 1000) {
+  if (G.phase === 'setup' && allReady(G, tKey(t))) {
     act(k, () => advancePhase(t, 'setup', 'talk'));
   } else if (G.phase === 'talk' && elapsed >= DURATION.talk * 1000) {
     act(k, () => advancePhase(t, 'talk', 'bet'));
   } else if (G.phase === 'bet' && (elapsed >= DURATION.bet * 1000 || allBet(G, t))) {
     act(k, () => advancePhase(t, 'bet', 'showdown'));
-  } else if (G.phase === 'showdown' && elapsed >= DURATION.showdown * 1000) {
-    act(k, () => advancePhase(t, 'showdown', 'gap'));
   }
 }
 
 function nextRound() {
   const G = state.G;
-  if (!G || !G.driver || G.phase !== 'gap') return;
+  if (!G || !G.driver || G.phase !== 'showdown') return;
+  if (Date.now() - G.phaseAt < VERDICT_MS) return;
   act(`start:${G.gameId}:${G.turnIndex + 1}`, () => startTurn(G.turnIndex + 1), true);
 }
 
@@ -536,7 +579,7 @@ function renderWaiting() {
 }
 
 /* ------------------------------------------------------------------ */
-/* S31〜S35 ゲーム卓                                                   */
+/* S31〜S34 ゲーム卓                                                   */
 /* ------------------------------------------------------------------ */
 
 // 自分の画面のお題カードに出すお題（1対1は相手のお題、複数人は主役のお題）
@@ -585,12 +628,12 @@ function renderHead(G, now) {
   const idx = PHASES.indexOf(G.phase);
   setHtml($('#play-steps'), PHASES.map((p, i) => `<span class="step${i < idx ? ' is-done' : ''}${i === idx ? ' is-now' : ''}"></span>`).join(''));
 
+  // お題提示とショーダウンは時間制限なし（ボタンを押すまで待つ）
   const total = (DURATION[G.phase] || 0) * 1000;
   const left = G.phaseAt ? Math.max(0, total - (now - G.phaseAt)) : total;
   const timer = $('#play-timer');
-  const showTimer = G.phase !== 'showdown';
-  setText(timer, showTimer ? String(Math.ceil(left / 1000)) : '—');
-  timer.classList.toggle('is-hurry', showTimer && G.phase !== 'gap' && left <= HURRY_SECONDS * 1000 && left > 0);
+  setText(timer, total ? String(Math.ceil(left / 1000)) : '—');
+  timer.classList.toggle('is-hurry', total > 0 && left <= HURRY_SECONDS * 1000 && left > 0);
   $('#play-fuse').style.transform = `scaleX(${total ? left / total : 0})`;
 }
 
@@ -834,56 +877,57 @@ function renderShowdown(G, turn, book, elapsed) {
   }
 }
 
-function renderGap(G, turn, book) {
+// ショーダウンのあと：「次のラウンドへ」（1対1は2人とも、複数人はホストが押せる）
+function renderNext(G, verdictOn) {
   const t = G.turnIndex;
-  const row = book.rows.find((r) => r.t === t);
-  const results = row?.results || {};
-  const bettors = bettorsOf(G, t);
-  const html = bettors.map(({ bettor, target }) => {
-    const r = results[bettor];
-    const q = turn.questions[target];
-    if (!r) {
-      const broke = (book.before[bettor] ?? 0) <= 0;
-      return `
-        <li class="bet-log-item">
-          ${avatarHtml(playerOf(bettor), 'sm')}
-          <span class="bet-log-body">
-            <span class="bet-log-name">${escapeHtml(nameOf(bettor))}</span>
-            <span class="bet-log-pick is-none">${broke ? 'コインがなく見学' : '賭けなかった'}</span>
-          </span>
-          <span class="bet-log-delta">±0</span>
-        </li>`;
-    }
-    const label = r.pick === 'A' ? q.optionA : q.optionB;
-    const deltaText = r.hit === null ? '±0' : `${r.delta > 0 ? '+' : '−'}${formatCoins(Math.abs(r.delta))}`;
-    return `
-      <li class="bet-log-item${r.hit ? ' is-hit' : r.hit === false ? ' is-miss' : ''}">
-        ${avatarHtml(playerOf(bettor), 'sm')}
-        <span class="bet-log-body">
-          <span class="bet-log-name">${escapeHtml(nameOf(bettor))}${G.kind === 'duel' ? ` → ${escapeHtml(nameOf(target))}のお題` : ''}</span>
-          <span class="bet-log-pick"><span class="code-suit is-${r.pick}">${SUITS[r.pick]}</span>${escapeHtml(label)}に${formatCoins(r.amount)}</span>
-        </span>
-        <span class="bet-log-delta">${deltaText}</span>
-      </li>`;
-  }).join('');
-  setHtml($('#gap-bets'), html);
-
   const last = t + 1 >= G.totalTurns;
   let next = '次のラウンドへ';
   if (last) next = '最終結果へ';
   else if (G.kind === 'room') next = '次のラウンドへ（主役交代）';
-  setText($('#gap-next'), next);
-  show($('#gap-next'), G.driver);
-  $('#gap-next').disabled = state.inflight.has(`start:${G.gameId}:${t + 1}`);
-  show($('#gap-wait'), !G.driver);
-  setText($('#gap-wait'), last ? 'ホストが最終結果へ進めます' : 'ホストが次のラウンドへ進めます');
-  let desc = '予想と答えのギャップについて話そう。なぜそっちだと思った？';
-  if (G.kind === 'room') {
-    desc = turn.targets[0] === state.uid
-      ? 'みんなの予想とのギャップについて話そう。どうしてそう見えたのか聞いてみて。'
-      : `主役の${playerOf(turn.targets[0]).nickname}さんに、意外だったところを話そう。なぜそっちに賭けた？`;
+  const btn = $('#next-round');
+  setText(btn, next);
+  show(btn, verdictOn && G.driver);
+  btn.disabled = state.inflight.has(`start:${G.gameId}:${t + 1}`);
+  show($('#next-wait'), verdictOn && !G.driver);
+  setText($('#next-wait'), last ? 'ホストが最終結果へ進めます' : 'ホストが次のラウンドへ進めます');
+}
+
+// お題提示：お題を読んで理解したら「始める」。全員そろったら尋問タイム
+function renderSetup(G) {
+  const key = tKey(G.turnIndex);
+  const stance = !!myStanceTurn(G);
+  const mine = !!G.ready[key]?.[state.uid] || state.inflight.has(`ready:${G.gameId}:${key}`);
+  const waiting = G.members.filter((id) => !G.ready[key]?.[id]);
+  const btn = $('#setup-ready');
+  show(btn, !mine);
+  btn.disabled = stance;
+  let desc = 'お題を読んで理解したら「始める」を押してください。全員がそろうと尋問タイム（60秒）が始まります。';
+  if (stance) desc = 'あなたの答えを、こっそり選んでください。';
+  else if (mine) {
+    desc = G.kind === 'duel'
+      ? `${playerOf(waiting[0]).nickname}さんの準備を待っています`
+      : `${G.members.length}人中 ${G.members.length - waiting.length}人が準備OK`;
   }
-  setText($('#gap-desc'), desc);
+  setText($('#setup-desc'), desc);
+}
+
+// 開始画面：遊び方と、全員の準備OK
+function renderStart(G) {
+  const mine = !!G.ready[START_KEY]?.[state.uid] || state.inflight.has(`ready:${G.gameId}:${START_KEY}`);
+  setText($('#start-rounds'), G.kind === 'duel' ? '全3ラウンド。毎ラウンド、2人ともお題が出て、お互いに相手のお題に賭けます。'
+    : `全${G.totalTurns}ラウンド。主役が1人ずつ交代し、主役以外の全員が主役の答えに賭けます。`);
+  setHtml($('#start-players'), G.members.map((id) => {
+    const ok = !!G.ready[START_KEY]?.[id];
+    return `
+      <li class="member">
+        ${avatarHtml(playerOf(id), 'sm')}
+        <span class="member-name">${escapeHtml(playerOf(id).nickname)}${id === state.uid ? '（あなた）' : ''}</span>
+        <span class="badge${ok ? ' badge-ok' : ''}">${ok ? '準備OK' : '準備中'}</span>
+      </li>`;
+  }).join(''));
+  show($('#start-ready'), !mine);
+  show($('#start-wait'), mine);
+  showView('start');
 }
 
 function renderPlay(now = Date.now()) {
@@ -896,11 +940,11 @@ function renderPlay(now = Date.now()) {
   }
   showView('play');
   const elapsed = G.phaseAt ? now - G.phaseAt : 0;
-  const revealed = G.phase === 'gap' || (G.phase === 'showdown' && elapsed >= DRUM_MS);
+  const revealed = G.phase === 'showdown' && elapsed >= DRUM_MS;
   const drumming = G.phase === 'showdown' && elapsed < DRUM_MS;
   const book = ledger(G);
   // コインの増減は、当たり外れを出すタイミングで動かす
-  const coinsRevealed = G.phase === 'gap' || (G.phase === 'showdown' && elapsed >= VERDICT_MS);
+  const coinsRevealed = G.phase === 'showdown' && elapsed >= VERDICT_MS;
 
   // フェーズが変わった瞬間に短く振動
   const phaseKey = `${G.gameId}:${key}:${G.phase}`;
@@ -920,15 +964,13 @@ function renderPlay(now = Date.now()) {
   renderBank(G, coinsRevealed, book);
   renderCard(G, turn, revealed, drumming);
   PHASES.forEach((p) => show($(`#phase-${p}`), p === G.phase));
-  if (G.phase === 'setup') {
-    setText($('#setup-desc'), myStanceTurn(G)
-      ? 'あなたの答えを、こっそり選んでください。'
-      : 'お題を読んだら、まもなく尋問タイム。答えはまだ伏せられています。');
-  }
+  if (G.phase === 'setup') renderSetup(G);
   if (G.phase === 'talk') renderTalk(G, turn);
   if (G.phase === 'bet') renderBet(G, turn, book);
-  if (G.phase === 'showdown') renderShowdown(G, turn, book, elapsed);
-  if (G.phase === 'gap') renderGap(G, turn, book);
+  if (G.phase === 'showdown') {
+    renderShowdown(G, turn, book, elapsed);
+    renderNext(G, elapsed >= VERDICT_MS);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1030,7 +1072,7 @@ function render() {
     return;
   }
   if (G.turnIndex < 0 || !G.phase) {
-    showView('loading');
+    renderStart(G);
     return;
   }
   renderPlay();
@@ -1044,6 +1086,7 @@ function tick() {
   bot.run(G, now);
   renderStance(G, now);
   if (G.turnIndex >= 0 && G.phase) renderPlay(now);
+  else renderStart(G);
 }
 
 function onDuel(duel) {
@@ -1109,7 +1152,15 @@ const bot = {
     }
   },
   run(G, now) {
-    if (!isLocalMode || G.status !== 'playing' || G.turnIndex < 0 || !G.phaseAt) return;
+    if (!isLocalMode || G.status !== 'playing') return;
+    // 開始画面・お題提示の準備OKは、すぐに押す
+    const readyKey = G.turnIndex < 0 ? START_KEY : G.phase === 'setup' ? tKey(G.turnIndex) : null;
+    if (readyKey) {
+      G.playerIds.filter((id) => G.players[id]?.isDummy && !G.ready[readyKey]?.[id]).forEach((id) => {
+        act(`bot-ready:${G.gameId}:${readyKey}:${id}`, () => setReady(id, readyKey));
+      });
+    }
+    if (G.turnIndex < 0 || !G.phaseAt) return;
     const t = G.turnIndex;
     const key = tKey(t);
     const turn = G.turns[key];
@@ -1167,7 +1218,9 @@ function bindEvents() {
     if (btn) chooseStance(btn.dataset.stance);
   });
 
-  $('#gap-next').addEventListener('click', nextRound);
+  $('#next-round').addEventListener('click', nextRound);
+  $('#start-ready').addEventListener('click', pressReady);
+  $('#setup-ready').addEventListener('click', pressReady);
 
   $('#final-retry').addEventListener('click', async () => {
     if (state.kind === 'duel') {

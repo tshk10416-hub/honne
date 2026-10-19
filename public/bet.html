@@ -62,14 +62,42 @@
         <ol class="rules-list">
           <li>2人とも<strong>1,000コイン</strong>から。全<strong>3ラウンド</strong>です。</li>
           <li>毎ラウンド、お互いのアンケートから2択のお題が1つずつ出ます。答えは伏せたまま。</li>
-          <li><strong>尋問タイム</strong>（45秒）で質問し合って、相手の本音を探ります。お題をそのまま聞くのは禁止。</li>
+          <li>お題を読んで理解したら「始める」。2人そろうと<strong>尋問タイム</strong>（60秒）で質問し合って、相手の本音を探ります。お題をそのまま聞くのは禁止。</li>
           <li><strong>ベット</strong>（15秒）で相手の答えを予想して賭けます。当たれば賭け金の2倍が戻り、外れたら没収。</li>
           <li>3ラウンド後、コインの多いほうの勝ち。</li>
         </ol>
       </div>
     </section>
 
-    <!-- S31〜S35 ゲーム卓（お題提示 → 尋問 → ベット → ショーダウン → ギャップ・トーク） -->
+    <!-- S35 開始画面：遊び方を読んで、全員が準備OKを押したらスタート -->
+    <section id="view-start" class="screen" hidden>
+      <div class="bet-logo">
+        <h1 class="title">ステータス・ベット</h1>
+        <p class="muted">初対面の印象ギャンブル</p>
+      </div>
+
+      <div class="card rules">
+        <p class="card-title">遊び方</p>
+        <ol class="rules-list">
+          <li>全員<strong>1,000コイン</strong>から。<span id="start-rounds"></span></li>
+          <li><strong>お題提示：</strong>2択のお題が出ます。答えは伏せたまま。読んで理解したら「始める」。</li>
+          <li><strong>尋問タイム（60秒）：</strong>質問して本音を探ります。お題をそのまま聞くのは禁止。</li>
+          <li><strong>ベット（15秒）：</strong>答えを予想して賭けます。当たれば賭け金の2倍が戻り、外れたら没収。</li>
+          <li><strong>ショーダウン：</strong>答えを公開。「次のラウンドへ」で進みます。最後にコインの多い人の勝ち。</li>
+        </ol>
+      </div>
+
+      <ul class="member-list" id="start-players"></ul>
+
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-primary btn-block btn-big" id="start-ready">準備OK</button>
+      <div class="waiting" id="start-wait" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span>全員の準備OKを待っています</span>
+      </div>
+    </section>
+
+    <!-- S31〜S34 ゲーム卓（お題提示 → 尋問 → ベット → ショーダウン） -->
     <section id="view-play" class="table" hidden>
 
       <!-- 進行：ラウンドと残り時間 -->
@@ -133,13 +161,14 @@
         <p class="mine-answer" id="play-mine-answer"></p>
       </aside>
 
-      <!-- お題提示（10秒） -->
+      <!-- お題提示（全員が「始める」を押すまで） -->
       <div class="phase-box" id="phase-setup" hidden>
         <p class="phase-title">お題をチェック</p>
-        <p class="phase-desc" id="setup-desc">まもなく尋問タイムが始まります。</p>
+        <p class="phase-desc" id="setup-desc">お題を読んで理解したら「始める」を押してください。</p>
+        <button type="button" class="btn-next" id="setup-ready">始める</button>
       </div>
 
-      <!-- 尋問タイム（45秒） -->
+      <!-- 尋問タイム（60秒） -->
       <div class="phase-box" id="phase-talk" hidden>
         <p class="phase-title is-neon">質問して相手の本音を探れ！</p>
         <p class="phase-rule"><span class="phase-rule-tag">NG</span>お題をそのまま聞く・選択肢を読み上げる</p>
@@ -195,16 +224,10 @@
           <p class="verdict-detail" id="verdict-detail"></p>
         </div>
         <p class="verdict-sub" id="showdown-sub" hidden></p>
+        <button type="button" class="btn-next" id="next-round" hidden>次のラウンドへ</button>
+        <p class="phase-desc" id="next-wait" hidden>ホストが次のラウンドへ進めます</p>
       </div>
 
-      <!-- ギャップ・トーク（20秒） -->
-      <div class="phase-box" id="phase-gap" hidden>
-        <p class="phase-title is-neon">ギャップ・トーク</p>
-        <p class="phase-desc" id="gap-desc">予想と答えのギャップについて話そう。なぜそっちだと思った？</p>
-        <ul class="bet-log" id="gap-bets"></ul>
-        <button type="button" class="btn-next" id="gap-next">次のラウンドへ（主役交代）</button>
-        <p class="phase-desc" id="gap-wait" hidden>ホストが次のラウンドへ進めます</p>
-      </div>
     </section>
 
     <!-- S36 最終結果（ランキング） -->
