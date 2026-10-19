@@ -16,9 +16,11 @@ honne/
     versus.html          S09 1対1のモード選択（相手の個人カードをタッチしたあと）
     sniper.html          S10〜S12 1対1モード（ワード・スナイパー）
     defuse.html          D10〜D13 1対1モード（時限爆弾解除・60秒の協力プレイ）
+    bet.html             S30〜S36 ステータス・ベット（1対1は3ラウンド、3〜6人は主役が1人ずつ交代）
     css/common.css       共通スタイル
     css/sniper.css       ワード・スナイパー専用スタイル
     css/defuse.css       時限爆弾解除専用スタイル（赤の点滅・特大タイマー・特大A/Bボタン）
+    css/bet.css          ステータス・ベット専用スタイル（緑のカジノ卓・チップ・カードをめくる演出）
     js/firebase-config.js  Firebase の設定値（ここだけ書き換える）
     js/firebase.js       初期化と匿名ログイン、ローカルモード判定
     js/store.js          Firestore の読み書き（ローカルモード実装つき）
@@ -26,11 +28,11 @@ honne/
     js/topics.js         お題の抽出ロジック（フォールバック込み）
     js/quiz.js           時限爆弾解除のフォールバック用「直感2択クイズ」
     js/ui.js             画面共通の部品
-    js/index.js / profile.js / lobby.js / versus.js / sniper.js / defuse.js   各画面のロジック
+    js/index.js / profile.js / lobby.js / versus.js / sniper.js / defuse.js / bet.js   各画面のロジック
     data/presets.json    プリセットお題50問
 ```
 
-`bet.html`（ステップ4）と `anonymous.html` はまだありません。
+`anonymous.html`（アノニマス・ターゲット）はまだありません。
 
 ## 公開URL
 

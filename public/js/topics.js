@@ -77,8 +77,10 @@ function pickFresh(candidates, exclude) {
   return pick(unusedTopic.length ? unusedTopic : fresh);
 }
 
-// プロファイル・ベット：主役の回答済みの問いから出題。なければプリセット＋主役の即決（needsStance）。
-// 正解（answer）を含むため、主役本人の端末で呼ぶこと。
+// ステータス・ベット：主役の回答済みの問いから出題。なければプリセット＋主役の即決（needsStance）。
+// 主役の答え（answer）も返す。アンケートの回答と同じく、画面には出さないだけの扱い。
+// hints は尋問タイムに出す、揺さぶりの質問の例（お題をそのまま聞かずに答えを探るためのもの）。
+// usedRefs … このゲームで出題済みの問い（同じ問いを続けて出さない）
 export async function pickBetQuestion(protagonist, usedRefs = []) {
   const name = protagonist?.nickname || '主役';
   const fresh = answeredQuestions(protagonist).filter((q) => !usedRefs.includes(`survey:${q.id}`));
@@ -91,6 +93,7 @@ export async function pickBetQuestion(protagonist, usedRefs = []) {
         optionB: q.options.B.label,
         source: 'survey',
         ref: `survey:${q.id}`,
+        hints: shuffle(q.defuseHints || []),
       },
       answer: protagonist.survey[q.id],
       needsStance: false,
@@ -104,6 +107,7 @@ export async function pickBetQuestion(protagonist, usedRefs = []) {
       optionB: t.optionB,
       source: 'preset',
       ref: `preset:${t.id}`,
+      hints: shuffle(t.hints || []),
     },
     answer: null,
     needsStance: true,

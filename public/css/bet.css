@@ -1,0 +1,1310 @@
+/* =========================================================
+   ステータス・ベット専用スタイル
+   ワイン色のテーブルから、深い緑のカジノ卓へ。縁は金、残り時間はネオン。
+   お題は紙のトランプ1枚。答えのカードは裏向きで伏せ、ショーダウンでめくる。
+   賭け金はポーカーチップ。A/B・チップ・BET確定は、片手の親指で届く下側にまとめる。
+   ========================================================= */
+
+:root {
+  --felt: #0d3a2b;
+  --felt-deep: #072219;
+  --felt-line: rgba(217, 178, 87, 0.35);
+  --gold-bright: #e2bd5f;
+  --gold-deep: #8a6a22;
+  --neon: #ff4f8b;
+  --neon-glow: rgba(255, 79, 139, 0.55);
+  --lamp: #ffe08a;
+  --lamp-glow: rgba(255, 224, 138, 0.55);
+  --on-felt: #f4efe6;
+  --on-felt-soft: rgba(244, 239, 230, 0.72);
+}
+
+html:has(body.casino) {
+  background: var(--felt-deep);
+}
+
+body.casino {
+  background-color: var(--felt-deep);
+  /* 卓のフェルトの毛並み */
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 10px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 10px);
+}
+
+/* ---------- マッチング・最終結果（紙のカード） ---------- */
+
+.bet-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.bet-logo .title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.2;
+  color: var(--felt);
+}
+
+/* 答えのマーク（紙の小札に印刷した ♥／♠） */
+.code-suit {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35em;
+  height: 1.35em;
+  margin-right: 5px;
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: var(--font-display);
+  font-size: 0.9em;
+  line-height: 1;
+  vertical-align: 0.05em;
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.code-suit.is-A {
+  color: var(--beni);
+}
+
+.code-suit.is-B {
+  color: var(--ai);
+}
+
+/* ---------- ゲーム卓 ---------- */
+
+.table {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  padding: 14px 12px 18px;
+  border: 2px solid var(--gold);
+  border-radius: 22px;
+  background: var(--felt);
+  color: var(--on-felt);
+  box-shadow:
+    inset 0 0 0 5px var(--felt),
+    inset 0 0 0 6px var(--felt-line),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.table-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.table-round {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+
+.table-round-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--gold-bright);
+}
+
+.table-round-num {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.table-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.table-phase-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.table-phase-steps {
+  display: flex;
+  gap: 5px;
+}
+
+.table-phase-steps .step {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(244, 239, 230, 0.2);
+}
+
+.table-phase-steps .step.is-done {
+  background: var(--gold);
+}
+
+.table-phase-steps .step.is-now {
+  background: var(--lamp);
+  box-shadow: 0 0 6px var(--lamp-glow);
+}
+
+/* 残り時間：ネオン管の数字 */
+.table-timer {
+  min-width: 64px;
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--lamp);
+  text-shadow: 0 0 6px var(--lamp-glow), 0 0 18px var(--lamp-glow);
+}
+
+.table-timer.is-hurry {
+  color: var(--neon);
+  text-shadow: 0 0 6px var(--neon-glow), 0 0 18px var(--neon-glow);
+  animation: neon-pulse 1s ease-in-out infinite;
+}
+
+.table-fuse {
+  height: 4px;
+  margin: -4px 4px 0;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.table-fuse-bar {
+  height: 100%;
+  background: var(--gold-bright);
+  transform-origin: left center;
+  transition: transform 0.2s linear;
+}
+
+/* ---------- 持ちコイン ---------- */
+
+.bank {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bank-me {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--felt-deep);
+  box-shadow: inset 0 0 0 1px var(--felt-line);
+}
+
+/* 金のチップ */
+.bank-chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow:
+    inset 0 0 0 3px var(--gold-bright),
+    inset 0 0 0 5px var(--felt-deep),
+    inset 0 0 0 9px var(--gold-bright),
+    0 2px 0 var(--gold-deep);
+}
+
+.bank-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-felt-soft);
+}
+
+.bank-coins {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold-bright);
+}
+
+.bank-me.is-up .bank-coins {
+  color: var(--lamp);
+  text-shadow: 0 0 10px var(--lamp-glow);
+}
+
+.bank-me.is-down .bank-coins {
+  color: var(--on-felt);
+}
+
+/* 増減の数字：チップの上にふわっと出て消える */
+.bank-delta {
+  position: absolute;
+  right: 12px;
+  top: -14px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.bank-delta.is-up {
+  background: var(--lamp);
+  color: var(--felt-deep);
+}
+
+.bank-delta.is-down {
+  background: var(--neon);
+  color: var(--paper);
+}
+
+.bank-delta.is-pop {
+  animation: coin-float 1.8s ease-out forwards;
+}
+
+.bank-others {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 0 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.bank-others:empty {
+  display: none;
+}
+
+.bank-other {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 5px 10px 5px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.bank-other-body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.bank-other-name {
+  max-width: 6.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--on-felt-soft);
+}
+
+.bank-other-coins {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--gold-bright);
+}
+
+.bank-other {
+  position: relative;
+}
+
+/* 状態の札は、名前の上に小さく重ねる（6人でも1列に収める） */
+.bank-tag {
+  position: absolute;
+  top: -7px;
+  right: 4px;
+  padding: 0 6px;
+  background: var(--felt);
+  line-height: 1.5;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 239, 230, 0.35);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--on-felt-soft);
+}
+
+.bank-tag.is-bet {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--felt-deep);
+}
+
+.bank-tag.is-star {
+  border-color: var(--neon);
+  color: var(--neon);
+}
+
+/* ---------- お題カード（紙のトランプ） ---------- */
+
+.topic-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 5px var(--paper),
+    inset 0 0 0 6px var(--rule),
+    4px 5px 0 rgba(0, 0, 0, 0.35);
+  animation: deal 0.35s ease-out;
+}
+
+.topic-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.topic-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.topic-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.topic-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.topic-option.is-A {
+  color: var(--beni);
+}
+
+.topic-option.is-B {
+  color: var(--ai);
+}
+
+.topic-option-mark {
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.topic-option-label {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* ショーダウン：正解の側を塗りつぶし、金の縁で囲む */
+.topic-option.is-answer {
+  background: currentColor;
+  box-shadow: 0 0 0 3px var(--gold-bright), 0 0 18px var(--lamp-glow);
+  transform: scale(1.03);
+}
+
+.topic-option.is-answer .topic-option-mark,
+.topic-option.is-answer .topic-option-label {
+  color: var(--paper);
+}
+
+.topic-option.is-miss {
+  opacity: 0.35;
+}
+
+/* 答えのカード：裏（？）→ 表 */
+.answer-flip {
+  height: 64px;
+  perspective: 800px;
+}
+
+.answer-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1.2);
+}
+
+.answer-flip.is-open .answer-flip-inner {
+  transform: rotateX(180deg);
+}
+
+.answer-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 8px;
+  backface-visibility: hidden;
+}
+
+/* 裏面：緑のフェルトに金の格子 */
+.answer-back {
+  background-color: var(--felt);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(217, 178, 87, 0.22) 0 2px, transparent 2px 10px),
+    repeating-linear-gradient(-45deg, rgba(217, 178, 87, 0.22) 0 2px, transparent 2px 10px);
+  color: var(--gold-bright);
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.answer-back-q {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--felt-deep);
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.answer-back-label {
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: var(--felt-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.answer-front {
+  transform: rotateX(180deg);
+  background: var(--paper-2);
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.answer-front.is-A {
+  color: var(--beni);
+}
+
+.answer-front.is-B {
+  color: var(--ai);
+}
+
+.answer-front.is-void {
+  color: var(--ink-soft);
+}
+
+.answer-front-suit {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.answer-front-label {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.answer-front.is-void .answer-front-label {
+  font-size: 14px;
+}
+
+/* ドラムロール中：伏せたカードが小刻みに震える */
+.topic-card.is-drum .answer-flip {
+  animation: drum-shake 0.12s linear infinite;
+}
+
+/* ---------- 自分のお題（自分の答えは自分にだけ） ---------- */
+
+.mine-card {
+  padding: 9px 12px;
+  border: 1.5px dashed var(--felt-line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.mine-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--gold-bright);
+}
+
+.mine-head span {
+  font-weight: 700;
+  color: var(--on-felt-soft);
+}
+
+.mine-text {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.mine-answer {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.mine-answer small {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--on-felt-soft);
+}
+
+/* ベット中は、親指で押す場所を広く取る（選択肢と答えのカードは下のボタンと同じなので隠す） */
+body[data-phase='bet'] .mine-card,
+body[data-phase='bet'] .topic-options,
+body[data-phase='bet'] .answer-flip {
+  display: none;
+}
+
+/* ---------- フェーズごとの案内 ---------- */
+
+.phase-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.phase-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+.phase-title.is-neon {
+  color: var(--paper);
+  text-shadow: 0 0 6px var(--neon-glow), 0 0 16px var(--neon-glow);
+}
+
+.phase-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--on-felt-soft);
+}
+
+.phase-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.phase-rule-tag {
+  padding: 0 7px;
+  border-radius: 4px;
+  background: var(--neon);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 揺さぶり質問のヒント */
+.shake-hints {
+  padding: 10px 14px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  text-align: left;
+}
+
+.shake-hints-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--gold-bright);
+}
+
+.shake-hints-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shake-hints-list li {
+  padding: 7px 0;
+  border-top: 1px dashed rgba(244, 239, 230, 0.2);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.shake-hints-list li:first-child {
+  border-top: 0;
+}
+
+/* ---------- ベット ---------- */
+
+.bet-box {
+  margin-top: auto;
+  text-align: left;
+}
+
+.bet-step {
+  margin: 0 0 6px 2px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--gold-bright);
+}
+
+.bet-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bet-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 66px;
+  padding: 8px;
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: var(--paper);
+  font-family: var(--font);
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+}
+
+.bet-pick.is-A {
+  color: var(--beni);
+}
+
+.bet-pick.is-B {
+  color: var(--ai);
+}
+
+.bet-pick:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.bet-pick-mark {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.bet-pick-label {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--ink);
+}
+
+.bet-pick[aria-pressed='true'] {
+  background: currentColor;
+  box-shadow: 0 0 0 3px var(--gold-bright), 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+.bet-pick[aria-pressed='true'] .bet-pick-mark,
+.bet-pick[aria-pressed='true'] .bet-pick-label {
+  color: var(--paper);
+}
+
+/* ポーカーチップ */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.chip {
+  --chip: var(--ai);
+  --chip-ink: var(--paper);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 74px;
+  aspect-ratio: 1;
+  justify-self: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--chip-ink);
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.05;
+  cursor: pointer;
+  touch-action: manipulation;
+  /* 縁の白い切り込みと、内側の輪 */
+  box-shadow:
+    inset 0 0 0 4px var(--chip),
+    inset 0 0 0 7px rgba(251, 247, 244, 0.85),
+    inset 0 0 0 11px var(--chip),
+    inset 0 0 0 12px rgba(251, 247, 244, 0.4),
+    0 4px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+}
+
+.chip > span {
+  pointer-events: none;
+}
+
+.chip.is-100 {
+  --chip: var(--ai);
+}
+
+.chip.is-300 {
+  --chip: var(--beni);
+}
+
+.chip.is-500 {
+  --chip: #1d1a1c;
+}
+
+.chip.is-all {
+  --chip: var(--gold-bright);
+  --chip-ink: var(--felt-deep);
+  font-size: 14px;
+}
+
+.chip[aria-pressed='true'] {
+  transform: translateY(-6px);
+  box-shadow:
+    inset 0 0 0 4px var(--chip),
+    inset 0 0 0 7px rgba(251, 247, 244, 0.85),
+    inset 0 0 0 11px var(--chip),
+    inset 0 0 0 12px rgba(251, 247, 244, 0.4),
+    0 0 0 3px var(--lamp),
+    0 0 16px var(--lamp-glow),
+    0 10px 0 rgba(0, 0, 0, 0.3);
+}
+
+.chip:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.btn-bet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--gold-bright);
+  color: var(--felt-deep);
+  font-family: var(--font);
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 5px 0 var(--gold-deep);
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.btn-bet:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--gold-deep);
+}
+
+.btn-bet:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 5px 0 var(--gold-deep);
+}
+
+.btn-bet-main {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.btn-bet-sub {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bet-placed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 14px;
+  border-radius: 12px;
+  background: var(--felt-deep);
+  box-shadow: inset 0 0 0 1px var(--felt-line);
+  text-align: center;
+  animation: pop-in 0.3s ease;
+}
+
+.bet-placed-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gold-bright);
+}
+
+.bet-placed-detail {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.bet-placed-detail strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--lamp);
+}
+
+/* ---------- ショーダウン ---------- */
+
+.drumroll {
+  margin: 8px 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--lamp);
+  text-shadow: 0 0 10px var(--lamp-glow);
+  animation: drum-text 0.5s ease-in-out infinite alternate;
+}
+
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: var(--felt-deep);
+  box-shadow: inset 0 0 0 1px var(--felt-line);
+  animation: verdict-in 0.5s cubic-bezier(0.3, 0.7, 0.2, 1.3);
+}
+
+.verdict-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1.25;
+}
+
+.verdict-detail {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.verdict.is-win .verdict-title,
+.verdict.is-win .verdict-detail {
+  color: var(--lamp);
+  text-shadow: 0 0 10px var(--lamp-glow), 0 0 24px var(--lamp-glow);
+}
+
+.verdict.is-lose .verdict-title,
+.verdict.is-lose .verdict-detail {
+  color: var(--neon);
+  text-shadow: 0 0 10px var(--neon-glow);
+}
+
+.verdict.is-even .verdict-detail {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--on-felt-soft);
+}
+
+.verdict-sub {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--on-felt-soft);
+}
+
+/* ---------- ギャップ・トーク ---------- */
+
+.bet-log {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: var(--felt-deep);
+  list-style: none;
+  text-align: left;
+}
+
+.bet-log-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(244, 239, 230, 0.12);
+}
+
+.bet-log-item:first-child {
+  border-top: 0;
+}
+
+.bet-log-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.bet-log-name {
+  font-size: 12px;
+  color: var(--on-felt-soft);
+}
+
+.bet-log-pick {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.bet-log-pick.is-none {
+  font-weight: 700;
+  color: var(--on-felt-soft);
+}
+
+.bet-log-delta {
+  font-family: var(--font-display);
+  font-size: 18px;
+  white-space: nowrap;
+  color: var(--on-felt-soft);
+}
+
+.bet-log-item.is-hit .bet-log-delta {
+  color: var(--lamp);
+}
+
+.bet-log-item.is-miss .bet-log-delta {
+  color: var(--neon);
+}
+
+.btn-next {
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--felt-deep);
+  font-family: var(--font-display);
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+}
+
+.btn-next:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.btn-next:disabled {
+  opacity: 0.5;
+}
+
+/* ---------- 答えの秘密選択 ---------- */
+
+.stance {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(7, 34, 25, 0.94);
+  animation: fade-in 0.2s ease;
+}
+
+.stance-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+  border-radius: 18px 18px 0 0;
+  border-top: 3px solid var(--gold-bright);
+  background: var(--paper);
+  color: var(--ink);
+  text-align: center;
+}
+
+.stance-secret {
+  align-self: center;
+  margin: 0;
+  padding: 1px 12px;
+  border-radius: 999px;
+  background: var(--neon);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stance-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.stance-question {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.stance-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+.stance-count-num {
+  font-family: var(--font-display);
+  font-size: 48px;
+  line-height: 1;
+  color: var(--neon);
+}
+
+.stance-count-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.stance-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stance-picks .bet-pick {
+  min-height: 92px;
+}
+
+.stance-picks .bet-pick-label {
+  font-size: 17px;
+}
+
+.stance-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* ---------- 最終結果 ---------- */
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+}
+
+.rank-item.is-top {
+  border-color: var(--gold);
+  background: #f6edd6;
+}
+
+.rank-item.is-me {
+  box-shadow: inset 4px 0 0 var(--beni);
+}
+
+.rank-no {
+  width: 26px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.rank-item.is-top .rank-no {
+  color: var(--gold-deep);
+}
+
+.rank-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.rank-name small {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--beni);
+}
+
+.rank-coins {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.rank-coins small {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.history-round {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.history-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+}
+
+.history-q {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.history-a {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.history-hit {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+/* ---------- アニメーション ---------- */
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes drum-shake {
+  0% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(-2px, 1px) rotate(-0.6deg); }
+  50% { transform: translate(2px, -1px) rotate(0.6deg); }
+  75% { transform: translate(-1px, -1px) rotate(-0.3deg); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
+@keyframes drum-text {
+  from { transform: scale(1); opacity: 0.75; }
+  to { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes verdict-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes coin-float {
+  0% { transform: translateY(10px) scale(0.7); opacity: 0; }
+  15% { transform: translateY(0) scale(1.15); opacity: 1; }
+  70% { transform: translateY(-6px) scale(1); opacity: 1; }
+  100% { transform: translateY(-22px) scale(1); opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes deal {
+  from { transform: translate(-12px, -18px) rotate(-4deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-timer.is-hurry,
+  .topic-card.is-drum .answer-flip,
+  .drumroll {
+    animation: none;
+  }
+
+  .answer-flip-inner {
+    transition: none;
+  }
+}

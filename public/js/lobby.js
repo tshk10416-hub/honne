@@ -15,9 +15,9 @@ const params = new URLSearchParams(location.search);
 const HEARTBEAT_MS = 30 * 1000;
 const INVITE_TTL_MS = 10 * 60 * 1000;
 const PLAYING_TTL_MS = 10 * 60 * 1000;
-const DUEL_MODE_NAMES = { sniper: 'ワード・スナイパー', defuse: '時限爆弾解除' };
+const DUEL_MODE_NAMES = { sniper: 'ワード・スナイパー', defuse: '時限爆弾解除', bet: 'ステータス・ベット' };
 
-// ゲーム中の画面（ステップ4以降で実装）
+// ゲーム中の画面（anonymous.html はまだありません）
 const MODE_PAGES = {
   profileBet: 'bet.html',
   anonymous: 'anonymous.html',
@@ -83,7 +83,7 @@ function renderDuels(duels) {
         return { d, opp, text: `${opp.nickname}さんから「${modeName}」の挑戦が届いています`, action: '見る' };
       }
       // ターン制なので終わりの時刻は決まっていない。しばらく動きのない対戦は表示しない
-      const current = d.turnOrder || duelModeOf(d) === 'defuse';
+      const current = d.turnOrder || duelModeOf(d) !== 'sniper';
       if (d.status === 'playing' && current && now - toMillis(d.updatedAt) < PLAYING_TTL_MS) {
         return { d, opp, text: `${opp.nickname}さんと「${modeName}」の対戦中です`, action: '戻る' };
       }
