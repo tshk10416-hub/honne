@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d3a2b">
+  <title>ステータス・ベット | HONNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/bet.css">
+</head>
+<body class="casino">
+  <main id="app" class="app">
+
+    <!-- 読み込み中 -->
+    <section id="view-loading" class="screen screen-center">
+      <div class="spinner" role="progressbar" aria-label="読み込み中"></div>
+    </section>
+
+    <!-- S30 マッチング（1対1：相手の参加待ち／挑戦を受ける） -->
+    <section id="view-waiting" class="screen" hidden>
+      <div class="topbar">
+        <a class="btn btn-ghost" href="lobby.html">← ホーム</a>
+        <span class="topbar-title">1対1モード</span>
+        <span style="width:64px"></span>
+      </div>
+
+      <div class="bet-logo">
+        <h1 class="title">ステータス・ベット</h1>
+        <p class="muted">初対面の印象ギャンブル</p>
+      </div>
+
+      <div class="versus card">
+        <div class="versus-player" id="wait-me"></div>
+        <span class="versus-vs">VS</span>
+        <div class="versus-player" id="wait-opp"></div>
+      </div>
+
+      <!-- 自分は参加済み・相手待ち -->
+      <div id="wait-pending" class="card" hidden>
+        <div class="waiting" style="padding:4px 0 12px">
+          <div class="spinner" aria-hidden="true"></div>
+          <span id="wait-pending-text">相手の参加を待っています</span>
+        </div>
+        <p class="muted">相手のスマホで<strong>あなたの個人カード</strong>をタッチしてもらうか、相手のホーム画面に届く挑戦を受けてもらってください。</p>
+        <button type="button" class="btn btn-ghost btn-block btn-danger" id="wait-cancel" style="margin-top:8px">やめる</button>
+      </div>
+
+      <!-- 相手から挑戦が届いている -->
+      <div id="wait-invite" class="card" hidden>
+        <p class="card-title" id="wait-invite-text">挑戦が届いています</p>
+        <div class="btn-row" style="margin-top:12px">
+          <button type="button" class="btn" id="wait-decline">断る</button>
+          <button type="button" class="btn btn-primary" id="wait-accept">受けて立つ</button>
+        </div>
+      </div>
+
+      <div class="card rules">
+        <p class="card-title">遊び方</p>
+        <ol class="rules-list">
+          <li>2人とも<strong>1,000コイン</strong>から。全<strong>3ラウンド</strong>です。</li>
+          <li>毎ラウンド、お互いのアンケートから2択のお題が1つずつ出ます。答えは伏せたまま。</li>
+          <li>お題を読んで理解したら「始める」。2人そろうと<strong>尋問タイム</strong>（60秒）で質問し合って、相手の本音を探ります。お題をそのまま聞くのは禁止。</li>
+          <li><strong>ベット</strong>で相手の答えを予想して賭けます。2人とも賭けたらショーダウン。当たれば賭け金の2倍が戻り、外れたら没収。</li>
+          <li>3ラウンド後、コインの多いほうの勝ち。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- S35 開始画面：遊び方を読んで、全員が準備OKを押したらスタート -->
+    <section id="view-start" class="screen" hidden>
+      <div class="bet-logo">
+        <h1 class="title">ステータス・ベット</h1>
+        <p class="muted">初対面の印象ギャンブル</p>
+      </div>
+
+      <div class="card rules">
+        <p class="card-title">遊び方</p>
+        <ol class="rules-list">
+          <li>全員<strong>1,000コイン</strong>から。<span id="start-rounds"></span></li>
+          <li><strong>お題提示：</strong>2択のお題が出ます。答えは伏せたまま。読んで理解したら「始める」。</li>
+          <li><strong>尋問タイム（60秒）：</strong>質問して本音を探ります。お題をそのまま聞くのは禁止。</li>
+          <li><strong>ベット：</strong>答えを予想して賭けます。全員が賭けたらショーダウン。当たれば賭け金の2倍が戻り、外れたら没収。</li>
+          <li><strong>ショーダウン：</strong>答えを公開。「次のラウンドへ」で進みます。最後にコインの多い人の勝ち。</li>
+        </ol>
+      </div>
+
+      <ul class="member-list" id="start-players"></ul>
+
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-primary btn-block btn-big" id="start-ready">準備OK</button>
+      <div class="waiting" id="start-wait" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <span>全員の準備OKを待っています</span>
+      </div>
+    </section>
+
+    <!-- S31〜S34 ゲーム卓（お題提示 → 尋問 → ベット → ショーダウン） -->
+    <section id="view-play" class="table" hidden>
+
+      <!-- 進行：ラウンドと残り時間 -->
+      <header class="table-head">
+        <div class="table-round">
+          <span class="table-round-label">ROUND</span>
+          <span class="table-round-num" id="play-round">1/3</span>
+        </div>
+        <div class="table-phase">
+          <span class="table-phase-name" id="play-phase">お題提示</span>
+          <span class="table-phase-steps" id="play-steps" aria-hidden="true"></span>
+        </div>
+        <div class="table-timer" id="play-timer" role="timer" aria-live="off">10</div>
+      </header>
+      <div class="table-fuse" aria-hidden="true"><div class="table-fuse-bar" id="play-fuse"></div></div>
+
+      <!-- 持ちコイン：自分は大きく、ほかの人は横並び -->
+      <div class="bank">
+        <div class="bank-me">
+          <span class="bank-chip" aria-hidden="true"></span>
+          <span class="bank-label">あなたのコイン</span>
+          <span class="bank-coins" id="play-coins">1,000</span>
+          <span class="bank-delta" id="play-delta" hidden></span>
+        </div>
+        <ul class="bank-others" id="play-others"></ul>
+      </div>
+
+      <!-- お題カード：主役の答えは伏せたまま（ショーダウンでめくる） -->
+      <article class="topic-card" id="play-card">
+        <p class="topic-who" id="play-who"></p>
+        <h2 class="topic-text" id="play-question"></h2>
+        <div class="topic-options">
+          <div class="topic-option is-A" id="play-opt-A">
+            <span class="topic-option-mark">♥A</span>
+            <span class="topic-option-label" id="play-opt-A-label"></span>
+          </div>
+          <div class="topic-option is-B" id="play-opt-B">
+            <span class="topic-option-mark">♠B</span>
+            <span class="topic-option-label" id="play-opt-B-label"></span>
+          </div>
+        </div>
+        <!-- 答えのカード：裏（？）→ ショーダウンで表に返る -->
+        <div class="answer-flip" id="play-answer" aria-live="polite">
+          <div class="answer-flip-inner">
+            <div class="answer-face answer-back">
+              <span class="answer-back-q">？</span>
+              <span class="answer-back-label">答えは伏せられています</span>
+            </div>
+            <div class="answer-face answer-front" id="play-answer-front">
+              <span class="answer-front-suit" id="play-answer-suit">♥</span>
+              <span class="answer-front-label" id="play-answer-label"></span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 1対1：自分が賭けられているお題（自分の答えは自分にだけ見える） -->
+      <aside class="mine-card" id="play-mine" hidden>
+        <p class="mine-head">あなたのお題<span>相手が賭けます</span></p>
+        <p class="mine-text" id="play-mine-question"></p>
+        <p class="mine-answer" id="play-mine-answer"></p>
+      </aside>
+
+      <!-- お題提示（全員が「始める」を押すまで） -->
+      <div class="phase-box" id="phase-setup" hidden>
+        <p class="phase-title">お題をチェック</p>
+        <p class="phase-desc" id="setup-desc">お題を読んで理解したら「始める」を押してください。</p>
+        <button type="button" class="btn-next" id="setup-ready">始める</button>
+      </div>
+
+      <!-- 尋問タイム（60秒） -->
+      <div class="phase-box" id="phase-talk" hidden>
+        <p class="phase-title is-neon">質問して相手の本音を探れ！</p>
+        <p class="phase-rule"><span class="phase-rule-tag">NG</span>お題をそのまま聞く・選択肢を読み上げる</p>
+        <div class="shake-hints" id="talk-hints-box">
+          <p class="shake-hints-title">揺さぶり質問のヒント</p>
+          <ul class="shake-hints-list" id="talk-hints"></ul>
+        </div>
+        <p class="phase-desc" id="talk-desc"></p>
+      </div>
+
+      <!-- ベット（全員が賭けるまで）：A/B → 賭け金 → BET確定 -->
+      <div class="phase-box bet-box" id="phase-bet" hidden>
+        <div id="bet-form">
+          <p class="bet-step">1. 答えはどっち？</p>
+          <div class="bet-picks" role="group" aria-label="予想する答え">
+            <button type="button" class="bet-pick is-A" data-pick="A" aria-pressed="false">
+              <span class="bet-pick-mark">♥A</span>
+              <span class="bet-pick-label" id="bet-pick-A-label"></span>
+            </button>
+            <button type="button" class="bet-pick is-B" data-pick="B" aria-pressed="false">
+              <span class="bet-pick-mark">♠B</span>
+              <span class="bet-pick-label" id="bet-pick-B-label"></span>
+            </button>
+          </div>
+          <p class="bet-step">2. いくら賭ける？</p>
+          <div class="chips" role="group" aria-label="賭け金">
+            <button type="button" class="chip is-100" data-stake="100" aria-pressed="false"><span>100</span></button>
+            <button type="button" class="chip is-300" data-stake="300" aria-pressed="false"><span>300</span></button>
+            <button type="button" class="chip is-500" data-stake="500" aria-pressed="false"><span>500</span></button>
+            <button type="button" class="chip is-all" data-stake="all" aria-pressed="false"><span>ALL<br>IN</span></button>
+          </div>
+          <button type="button" class="btn-bet" id="bet-confirm" disabled>
+            <span class="btn-bet-main">BET確定</span>
+            <span class="btn-bet-sub" id="bet-confirm-sub">答えと賭け金を選んでください</span>
+          </button>
+        </div>
+        <div class="bet-placed" id="bet-placed" hidden>
+          <p class="bet-placed-title" id="bet-placed-title">BET済み</p>
+          <p class="bet-placed-detail" id="bet-placed-detail"></p>
+          <p class="phase-desc" id="bet-placed-wait"></p>
+        </div>
+        <div class="bet-placed" id="bet-watch" hidden>
+          <p class="bet-placed-title" id="bet-watch-title">みんながあなたに賭けています</p>
+          <p class="phase-desc" id="bet-watch-desc"></p>
+        </div>
+      </div>
+
+      <!-- ショーダウン -->
+      <div class="phase-box" id="phase-showdown" hidden>
+        <p class="drumroll" id="showdown-drum">ドゥルルルルル…</p>
+        <div class="verdict" id="showdown-verdict" hidden>
+          <p class="verdict-title" id="verdict-title">的中！</p>
+          <p class="verdict-detail" id="verdict-detail"></p>
+        </div>
+        <p class="verdict-sub" id="showdown-sub" hidden></p>
+        <button type="button" class="btn-next" id="next-round" hidden>次のラウンドへ</button>
+        <p class="phase-desc" id="next-wait" hidden>ホストが次のラウンドへ進めます</p>
+      </div>
+
+    </section>
+
+    <!-- S36 最終結果（ランキング） -->
+    <section id="view-final" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">最終結果</span>
+      </div>
+      <div class="result-hero">
+        <div class="stamp" id="final-stamp" aria-hidden="true">勝</div>
+        <h1 class="result-title" id="final-title">優勝</h1>
+        <p class="muted" id="final-desc"></p>
+      </div>
+
+      <ol class="ranking" id="final-ranking"></ol>
+
+      <p class="section-label">ラウンドごとの答え</p>
+      <ul class="history" id="final-history"></ul>
+
+      <div class="spacer"></div>
+      <div class="btn-row" id="final-actions">
+        <a class="btn" href="lobby.html" id="final-home">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="final-retry">もう一度</button>
+      </div>
+      <p class="muted" id="final-wait" style="text-align:center" hidden>ホストが次の遊び方を選ぶのを待っています</p>
+    </section>
+
+    <!-- キャンセル -->
+    <section id="view-cancelled" class="screen screen-center" hidden>
+      <div class="big-emoji" aria-hidden="true" style="color:var(--ink-soft)">♣</div>
+      <h1 class="title">ステータス・ベットはキャンセルされました</h1>
+      <p class="muted">また話したくなったら、カードをタッチしてね。</p>
+      <div class="btn-row" style="width:100%">
+        <a class="btn" href="lobby.html">ホームへ</a>
+        <button type="button" class="btn btn-primary" id="cancelled-retry">もう一度申し込む</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 答えの秘密選択（アンケート未回答のお題のとき、主役の画面だけに出る） -->
+  <div class="stance" id="stance" role="dialog" aria-modal="true" aria-labelledby="stance-title" hidden>
+    <div class="stance-sheet">
+      <p class="stance-secret">画面を隠して</p>
+      <h2 class="stance-title" id="stance-title">あなたの答えを秘密裏に選んでください</h2>
+      <p class="stance-question" id="stance-question"></p>
+      <div class="stance-count" aria-hidden="true">
+        <span class="stance-count-num" id="stance-count">3</span>
+        <span class="stance-count-label">秒で直感で</span>
+      </div>
+      <div class="stance-picks">
+        <button type="button" class="bet-pick is-A" data-stance="A">
+          <span class="bet-pick-mark">♥A</span>
+          <span class="bet-pick-label" id="stance-A-label"></span>
+        </button>
+        <button type="button" class="bet-pick is-B" data-stance="B">
+          <span class="bet-pick-mark">♠B</span>
+          <span class="bet-pick-label" id="stance-B-label"></span>
+        </button>
+      </div>
+      <p class="stance-note">時間切れのときは、ランダムで決まります</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/bet.js"></script>
+</body>
+</html>

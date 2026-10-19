@@ -1,0 +1,704 @@
+/* =========================================================
+   時限爆弾解除（ディフューズ・トーク）専用スタイル
+   準備と結果はいつものトランプ。起爆すると、カードが黒い起爆装置に変わり、
+   テーブルごと赤く点滅する。残り10秒で点滅が速くなる。
+   ========================================================= */
+
+:root {
+  --bomb: #1d1016;
+  --bomb-2: #2c1820;
+  --bomb-line: #4a2c37;
+  --led: #ff3347;
+  --led-glow: rgba(255, 51, 71, 0.55);
+  --led-soft: #ffb3bb;
+  --signal-a: #ff4d61;
+  --signal-b: #6f86ff;
+}
+
+.defuse-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding-top: 6px;
+}
+
+.defuse-logo .title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.2;
+  color: var(--beni);
+}
+
+/* ---------- D11 準備 ---------- */
+
+.code-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.code-item {
+  padding: 14px 16px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ink);
+  background: var(--paper);
+}
+
+.code-q {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.code-no {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--beni);
+}
+
+.code-answer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.code-suit {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.code-suit.is-A {
+  color: var(--beni);
+}
+
+.code-suit.is-B {
+  color: var(--ai);
+}
+
+.code-source {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mini-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mini-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 8px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mini-choice-key {
+  font-family: var(--font-display);
+}
+
+.mini-choice[data-key='A'] .mini-choice-key { color: var(--beni); }
+.mini-choice[data-key='B'] .mini-choice-key { color: var(--ai); }
+
+.mini-choice[data-key='A'][aria-pressed='true'] {
+  background: var(--beni);
+  border-color: var(--beni);
+  color: var(--paper);
+}
+
+.mini-choice[data-key='B'][aria-pressed='true'] {
+  background: var(--ai);
+  border-color: var(--ai);
+  color: var(--paper);
+}
+
+.mini-choice[aria-pressed='true'] .mini-choice-key {
+  color: var(--paper);
+}
+
+.arm-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.arm-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.arm-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arm-state {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.arm-state.is-ready {
+  color: var(--success);
+}
+
+/* ---------- D12 起爆装置 ---------- */
+
+/* テーブル全体の赤い点滅（画面の上に重ねる） */
+body.is-live::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 35%, var(--led) 100%);
+  opacity: 0;
+  animation: alarm 1s steps(2, jump-none) infinite;
+}
+
+body.is-live.is-critical::after {
+  background: radial-gradient(120% 90% at 50% 50%, rgba(255, 51, 71, 0.25) 20%, var(--led) 100%);
+  animation-duration: 0.36s;
+}
+
+body.is-live {
+  background-color: #2a0610;
+}
+
+.screen.bomb {
+  gap: 14px;
+  padding: 22px 16px calc(24px + env(safe-area-inset-bottom));
+  background: var(--bomb);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 7px var(--bomb),
+    inset 0 0 0 8px var(--bomb-line),
+    0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.screen.bomb::before,
+.screen.bomb::after {
+  content: '爆\A♦';
+  color: var(--led);
+}
+
+.bomb-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 10px;
+  border-bottom: 1.5px dashed var(--bomb-line);
+}
+
+.bomb-order {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--led-soft);
+  letter-spacing: 0.08em;
+}
+
+/* 特大デジタルタイマー */
+.bomb-timer {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-size: clamp(54px, 19vw, 92px);
+  line-height: 1;
+  color: var(--led);
+  text-shadow: 0 0 18px var(--led-glow), 0 0 2px var(--led);
+}
+
+.tdigit {
+  display: inline-block;
+  width: 0.8em;
+  text-align: center;
+}
+
+.tdot {
+  display: inline-block;
+  width: 0.34em;
+  text-align: center;
+}
+
+body.is-critical .bomb-timer {
+  animation: shake 0.36s linear infinite;
+}
+
+/* 導火線：残り時間に合わせて右から縮む */
+.bomb-fuse {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bomb-line);
+  overflow: hidden;
+}
+
+.bomb-fuse-bar {
+  height: 100%;
+  background: var(--led);
+  box-shadow: 0 0 10px var(--led-glow);
+  transform-origin: left center;
+}
+
+.bomb-partner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(251, 247, 244, 0.75);
+}
+
+.bomb-partner .avatar {
+  border-color: var(--paper);
+}
+
+.bomb-partner .is-ok {
+  color: #7be0a8;
+}
+
+/* 解除パネル */
+.panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel {
+  padding: 12px;
+  border: 1.5px solid var(--bomb-line);
+  border-radius: var(--radius);
+  background: var(--bomb-2);
+}
+
+.panel.is-set {
+  border-color: rgba(251, 247, 244, 0.55);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+}
+
+.panel-no {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--led);
+}
+
+.panel-topic {
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.panel-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: rgba(251, 247, 244, 0.85);
+}
+
+.panel-hint-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--led-soft);
+}
+
+/* 直接聞くのは禁止（画面に1回だけ） */
+.bomb-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(251, 247, 244, 0.8);
+}
+
+.bomb-rule-tag {
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--led);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.panel-keys {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* 焦っていても押し間違えない特大の A / B */
+.key-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 92px;
+  padding: 8px 6px;
+  border: 2.5px solid currentColor;
+  border-radius: 12px;
+  background: transparent;
+  font-family: var(--font);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.06s ease;
+}
+
+.key-btn.is-A {
+  color: var(--signal-a);
+}
+
+.key-btn.is-B {
+  color: var(--signal-b);
+}
+
+.key-btn:active {
+  transform: scale(0.96);
+}
+
+.key-btn:disabled {
+  cursor: default;
+  transform: none;
+}
+
+.key-btn:disabled:not([aria-pressed='true']) {
+  opacity: 0.35;
+}
+
+.key-btn-mark {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.key-btn-label {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+  color: var(--paper);
+  text-align: center;
+}
+
+.key-btn.is-A[aria-pressed='true'] {
+  background: var(--signal-a);
+  border-color: var(--signal-a);
+}
+
+.key-btn.is-B[aria-pressed='true'] {
+  background: var(--signal-b);
+  border-color: var(--signal-b);
+}
+
+.key-btn[aria-pressed='true'] .key-btn-mark,
+.key-btn[aria-pressed='true'] .key-btn-label {
+  color: var(--paper);
+}
+
+.key-btn:focus-visible,
+.btn-defuse:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* 同時解除ボタン */
+.btn-defuse {
+  position: sticky;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 84px;
+  margin-top: auto;
+  padding: 12px;
+  border: 3px solid var(--paper);
+  border-radius: 14px;
+  background: var(--led);
+  color: var(--paper);
+  font-family: var(--font);
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 0 0 4px var(--bomb), 0 0 26px var(--led-glow);
+}
+
+.btn-defuse:disabled {
+  background: var(--bomb-2);
+  border-color: var(--bomb-line);
+  color: rgba(251, 247, 244, 0.45);
+  box-shadow: 0 0 0 4px var(--bomb);
+  cursor: not-allowed;
+}
+
+.btn-defuse:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.btn-defuse-main {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.btn-defuse-sub {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bomb-done {
+  padding: 14px;
+  border: 2px solid #7be0a8;
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.bomb-done-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: #7be0a8;
+}
+
+.bomb-done-desc {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(251, 247, 244, 0.8);
+}
+
+/* 起爆のカウントダウン */
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(29, 16, 22, 0.94);
+  color: var(--paper);
+}
+
+.countdown-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: var(--led-soft);
+}
+
+.countdown-rule {
+  order: 3;
+  margin: 12px 24px 0;
+  padding: 6px 14px;
+  border: 2px solid var(--led);
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--paper);
+  text-align: center;
+}
+
+.countdown-num {
+  font-family: var(--font-display);
+  font-size: 160px;
+  line-height: 1;
+  color: var(--led);
+  text-shadow: 0 0 30px var(--led-glow);
+}
+
+/* 爆発 */
+.boom {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--led);
+  pointer-events: none;
+  animation: boom-flash 1.6s ease-out forwards;
+}
+
+.boom-text {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 11vw, 64px);
+  white-space: nowrap;
+  text-align: center;
+  color: var(--paper);
+  animation: shake 0.12s linear 8;
+}
+
+/* ---------- D13 結果 ---------- */
+
+/* はんこは2文字なので横に並べる */
+#result-stamp {
+  font-size: 34px;
+}
+
+.result-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.2;
+  color: var(--beni);
+}
+
+.result-title.is-over {
+  color: var(--ink);
+}
+
+.penalty {
+  padding: 16px;
+  border: 3px solid var(--beni);
+  border-radius: var(--radius);
+  background: var(--beni-soft);
+  text-align: center;
+  transform: rotate(-1.5deg);
+}
+
+.penalty-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--beni-deep);
+  letter-spacing: 0.3em;
+}
+
+.penalty-text {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.answer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.answer-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.answer-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.answer-q {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.answer-a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.answer-input {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--beni);
+}
+
+.answer-empty {
+  padding: 4px 2px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.badge-ok {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--paper);
+}
+
+.badge-ng {
+  background: var(--paper);
+  border-color: var(--beni);
+  color: var(--beni);
+}
+
+@keyframes alarm {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 1px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-1px, 2px); }
+}
+
+@keyframes boom-flash {
+  0% { background: #fff; opacity: 1; }
+  12% { background: var(--led); opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}

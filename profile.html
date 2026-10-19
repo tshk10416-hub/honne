@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4a1530">
+  <title>プロフィール | HONNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+  <main id="app" class="app">
+
+    <!-- 読み込み中 -->
+    <section id="step-loading" class="screen screen-center">
+      <div class="spinner" role="progressbar" aria-label="読み込み中"></div>
+    </section>
+
+    <!-- S01 ニックネーム登録 -->
+    <section id="step-name" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">自己紹介 1/2</span>
+        <button type="button" id="name-cancel" class="btn btn-ghost" hidden>キャンセル</button>
+      </div>
+      <h1 class="title">はじめまして！<br>なんて呼べばいい？</h1>
+      <div class="screen-center" style="flex:0">
+        <span id="name-avatar"></span>
+      </div>
+      <form id="name-form" class="card" novalidate>
+        <div class="field">
+          <label class="field-label" for="nickname">ニックネーム</label>
+          <input id="nickname" class="input" type="text" maxlength="12" autocomplete="nickname"
+                 placeholder="例：トシ" required>
+          <span class="field-hint"><span id="nickname-count">0</span>/12</span>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <span class="field-label" id="color-label">アイコンの色</span>
+          <div id="swatches" class="swatches" role="radiogroup" aria-labelledby="color-label"></div>
+        </div>
+      </form>
+      <div class="spacer"></div>
+      <button type="submit" form="name-form" id="name-submit" class="btn btn-primary btn-block" disabled>次へ</button>
+    </section>
+
+    <!-- S02 事前アンケート（1問ずつ表示） -->
+    <section id="step-survey" class="screen" hidden>
+      <div class="topbar">
+        <button type="button" id="survey-back" class="btn btn-ghost">← 戻る</button>
+        <span class="topbar-title">自己紹介 2/2</span>
+        <button type="button" id="survey-skip" class="btn btn-ghost">スキップ</button>
+      </div>
+      <div class="progress" aria-hidden="true"><div id="survey-progress" class="progress-bar" style="width:0"></div></div>
+      <div>
+        <div class="q-number" id="q-number">Q1 / 5</div>
+        <h1 class="q-text" id="q-text"></h1>
+      </div>
+      <div class="choices" id="choices"></div>
+      <div class="spacer"></div>
+      <div class="dots" id="survey-dots" style="justify-content:center"></div>
+      <p class="muted" style="text-align:center">答えたくない質問はスキップでOK。<br>空いたところは用意されたお題で遊べます。</p>
+    </section>
+
+    <!-- 回答の確認 -->
+    <section id="step-done" class="screen" hidden>
+      <div class="topbar">
+        <span class="topbar-title">確認</span>
+      </div>
+      <div class="profile-card card">
+        <span id="done-avatar"></span>
+        <div>
+          <p class="profile-name" id="done-name"></p>
+          <p class="muted" id="done-count"></p>
+        </div>
+      </div>
+      <p class="section-label">あなたの回答（タップで変更）</p>
+      <ul class="summary-list" id="summary-list"></ul>
+      <p class="muted">回答はゲームのお題に使われ、プレイ中に「正解」として明かされることがあります。</p>
+      <div class="spacer"></div>
+      <button type="button" id="done-submit" class="btn btn-primary btn-block">はじめる</button>
+    </section>
+
+  </main>
+  <script type="module" src="js/profile.js"></script>
+</body>
+</html>
