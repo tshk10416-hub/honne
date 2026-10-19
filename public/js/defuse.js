@@ -128,16 +128,22 @@ async function ensureMyCode() {
   state.coding = true;
   try {
     const me = await store.getPlayer(uid);
-    const { codes, keys } = pickDefuseCode(me, DEFUSE_DIGITS);
-    await store.updateDuel(state.duelId, (d) => (d.round === duel.round && d.status === 'playing'
-      && d.phase === 'arming' && !d.codes?.[uid]
-      ? { codes: { ...d.codes, [uid]: codes }, keys: { ...d.keys, [uid]: keys } }
-      : null));
+    // トランザクションの中で選ぶ：相手が同時にコードを作っても、同じ問題にならない（競合したら選び直し）
+    await store.updateDuel(state.duelId, (d) => {
+      if (d.round !== duel.round || d.status !== 'playing' || d.phase !== 'arming' || d.codes?.[uid]) return null;
+      const { codes, keys } = pickDefuseCode(me, DEFUSE_DIGITS, usedRefs(d, uid));
+      return { codes: { ...d.codes, [uid]: codes }, keys: { ...d.keys, [uid]: keys } };
+    });
   } catch (err) {
     toast(errorMessage(err), 'error');
   } finally {
     state.coding = false;
   }
+}
+
+// 相手（uid 以外）の解除コードで使われている問題
+function usedRefs(d, uid) {
+  return d.playerIds.filter((id) => id !== uid).flatMap((id) => (d.codes?.[id] || []).map((c) => c.ref));
 }
 
 function codeReady(id) {
@@ -242,13 +248,19 @@ function resetInputs() {
   state.inputs = codesOf(state.opponentId).map(() => null);
 }
 
+// パネルはラウンドごとに1回だけ作り、あとはボタンの状態だけ書き換える。
+// 同期のたびに作り直すと、指が触れている途中のボタンが入れ替わってタップが消えることがあるため。
 function renderPanels() {
   const { opponentId, uid, duel } = state;
   const done = !!duel.defused?.[uid];
   // 起爆のカウントダウン中は押せない
   const locked = done || duel.status !== 'playing' || Date.now() < liveStartsAt(duel);
   const codes = codesOf(opponentId);
-  $('#live-panels').innerHTML = codes.map((c, i) => `
+  const key = `${duel.round}:${codes.map((c) => c.ref).join(',')}`;
+  const list = $('#live-panels');
+  if (list.dataset.key !== key) {
+    list.dataset.key = key;
+    list.innerHTML = codes.map((c, i) => `
     <div class="panel${state.inputs[i] ? ' is-set' : ''}">
       <p class="panel-head"><span class="panel-no">コード${i + 1}</span><span class="panel-topic">${escapeHtml(c.topic)}</span></p>
       ${c.examples?.length ? `<p class="panel-hint"><span class="panel-hint-tag">ヒント</span>${escapeHtml(c.examples[0])}</p>` : ''}
@@ -261,6 +273,14 @@ function renderPanels() {
           </button>`).join('')}
       </div>
     </div>`).join('');
+  }
+  list.querySelectorAll('.panel').forEach((panel, i) => {
+    panel.classList.toggle('is-set', !!state.inputs[i]);
+  });
+  list.querySelectorAll('.key-btn').forEach((btn) => {
+    btn.setAttribute('aria-pressed', String(state.inputs[Number(btn.dataset.index)] === btn.dataset.key));
+    btn.disabled = locked;
+  });
   renderDefuseButton();
 }
 
@@ -302,7 +322,10 @@ async function defuse() {
   const endsAt = liveEndsAt(duel);
   try {
     await store.updateDuel(state.duelId, (d) => {
-      if (d.round !== round || d.status !== 'playing' || d.phase !== 'live' || d.defused?.[uid]) return null;
+      if (d.round !== round || d.defused?.[uid]) return null;
+      // 同じ瞬間に相手が爆発させていたら、結果に出すために入力だけ残す
+      if (d.status === 'finished') return d.inputs?.[uid] ? null : { inputs: { ...d.inputs, [uid]: inputs } };
+      if (d.status !== 'playing' || d.phase !== 'live') return null;
       const now = Date.now();
       const allInputs = { ...d.inputs, [uid]: inputs };
       if (now >= endsAt) {
@@ -331,6 +354,25 @@ async function defuse() {
   }
 }
 
+// 解除ボタンを押す前に終わったとき、途中まで選んでいた入力も結果に残す
+function withMyInputs(d) {
+  const { uid } = state;
+  if (d.inputs?.[uid] || state.inputsRound !== d.round || !state.inputs.some(Boolean)) return { ...d.inputs };
+  return { ...d.inputs, [uid]: [...state.inputs] };
+}
+
+async function recordMyInputs() {
+  const { round } = state.duel;
+  if (state.inputsRound !== round || !state.inputs.some(Boolean) || state.duel.inputs?.[state.uid]) return;
+  try {
+    await store.updateDuel(state.duelId, (d) => (d.round === round && d.status === 'finished' && !d.inputs?.[state.uid]
+      ? { inputs: withMyInputs(d) }
+      : null));
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
 // 時間切れ：最初に気付いた端末が爆発させる
 async function explodeByTimeout() {
   const { round } = state.duel;
@@ -338,7 +380,9 @@ async function explodeByTimeout() {
   state.exploding = round;
   try {
     await store.updateDuel(state.duelId, (d) => (d.round === round && d.status === 'playing' && d.phase === 'live'
-      ? { status: 'finished', outcome: 'exploded', reason: 'timeout' }
+      ? {
+        status: 'finished', outcome: 'exploded', reason: 'timeout', inputs: withMyInputs(d),
+      }
       : null));
   } catch (err) {
     console.warn(err);
@@ -511,6 +555,7 @@ async function onDuel(duel) {
       break;
     case 'finished':
       renderResult();
+      recordMyInputs();
       break;
     default:
       stopTicker();
@@ -562,7 +607,7 @@ const bot = {
     if (duel.phase === 'arming') {
       this.later(1200, () => store.updateDuel(state.duelId, (d) => {
         if (d.round !== round || d.phase !== 'arming' || d.armed?.[botId]) return null;
-        const made = pickDefuseCode(state.opponent, DEFUSE_DIGITS);
+        const made = pickDefuseCode(state.opponent, DEFUSE_DIGITS, usedRefs(d, botId));
         const keys = made.keys.map((k) => k || KEYS[Math.floor(Math.random() * 2)]);
         const armed = { ...d.armed, [botId]: true };
         const all = d.playerIds.every((id) => armed[id]);
