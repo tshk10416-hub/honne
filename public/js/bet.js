@@ -309,17 +309,14 @@ function writeGame(fn) {
   });
 }
 
-// このゲームで出題済みの問い（主役ごとのアンケートの問いと、全員共通のプリセット）
-function usedRefsFor(G, id, picked) {
+// このゲームで出題済みの問い（全員分）と、このターンにほかの人へ出すと決めた問い。
+// 同じグループのお題は出さないので、2人（全員）のお題が重ならない
+function usedRefsFor(G, picked) {
   const refs = [];
   Object.values(G.turns).forEach((turn) => {
-    Object.entries(turn.questions || {}).forEach(([target, q]) => {
-      if (target === id || q.source === 'preset') refs.push(q.ref);
-    });
+    Object.values(turn.questions || {}).forEach((q) => refs.push(q.ref));
   });
-  Object.values(picked).forEach((q) => {
-    if (q.source === 'preset') refs.push(q.ref);
-  });
+  Object.values(picked).forEach((q) => refs.push(q.ref));
   return refs;
 }
 
@@ -341,7 +338,7 @@ async function startTurn(t) {
     // eslint-disable-next-line no-await-in-loop
     const player = (await store.getPlayer(id)) || playerOf(id);
     // eslint-disable-next-line no-await-in-loop
-    const picked = await pickBetQuestion(player, usedRefsFor(G, id, questions));
+    const picked = await pickBetQuestion(player, usedRefsFor(G, questions));
     questions[id] = picked.question;
     needsStance[id] = picked.needsStance;
     if (!picked.needsStance) answers[id] = picked.answer;
