@@ -581,8 +581,10 @@ body.casino {
   color: var(--on-felt-soft);
 }
 
-/* ベット中は、親指で押す場所を広く取る（選択肢と答えのカードは下のボタンと同じなので隠す） */
+/* ベット中は、親指で押す場所を広く取る（選択肢と答えのカードは下のボタンと同じなので隠す）。
+   ショーダウンでは「次のラウンドへ」が画面に収まるよう、自分のお題を隠す */
 body[data-phase='bet'] .mine-card,
+body[data-phase='showdown'] .mine-card,
 body[data-phase='bet'] .topic-options,
 body[data-phase='bet'] .answer-flip {
   display: none;
@@ -956,68 +958,7 @@ body[data-phase='bet'] .answer-flip {
   color: var(--on-felt-soft);
 }
 
-/* ---------- ギャップ・トーク ---------- */
-
-.bet-log {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 4px 12px;
-  border-radius: 12px;
-  background: var(--felt-deep);
-  list-style: none;
-  text-align: left;
-}
-
-.bet-log-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 0;
-  border-top: 1px solid rgba(244, 239, 230, 0.12);
-}
-
-.bet-log-item:first-child {
-  border-top: 0;
-}
-
-.bet-log-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  line-height: 1.4;
-}
-
-.bet-log-name {
-  font-size: 12px;
-  color: var(--on-felt-soft);
-}
-
-.bet-log-pick {
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.bet-log-pick.is-none {
-  font-weight: 700;
-  color: var(--on-felt-soft);
-}
-
-.bet-log-delta {
-  font-family: var(--font-display);
-  font-size: 18px;
-  white-space: nowrap;
-  color: var(--on-felt-soft);
-}
-
-.bet-log-item.is-hit .bet-log-delta {
-  color: var(--lamp);
-}
-
-.bet-log-item.is-miss .bet-log-delta {
-  color: var(--neon);
-}
+/* ---------- 次へ進むボタン ---------- */
 
 .btn-next {
   width: 100%;
@@ -1041,6 +982,18 @@ body[data-phase='bet'] .answer-flip {
 
 .btn-next:disabled {
   opacity: 0.5;
+}
+
+.btn-next[hidden] {
+  display: none;
+}
+
+/* ---------- 開始画面 ---------- */
+
+#start-players .badge-ok {
+  border-color: var(--felt);
+  background: var(--felt);
+  color: var(--paper);
 }
 
 /* ---------- 答えの秘密選択 ---------- */

@@ -198,6 +198,7 @@ function newBetDoc(duel, uid, opponentId, ids, players) {
     turns: {},
     answers: {},
     bets: {},
+    ready: {}, // 'start'（開始画面）・tN（お題提示）→ { uid: true }
     createdAt: duel?.createdAt || SERVER_TIME,
     updatedAt: SERVER_TIME,
   };
