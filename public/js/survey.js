@@ -3,12 +3,14 @@
 //   word      … 言わせるワード（「家にいた」「出かけた」のように、ワードが入っていれば言い方が変わっても成功）
 //   questions … そのワードを言わせるための質問例（攻撃ターンにそのまま読み上げられる形）
 // betPrompt はプロファイル・ベット用の出題文で、{name} が主役の名前に置き換わります。
+// defuseHints は時限爆弾解除用：お題をそのまま聞かずに答えを探る、遠回しな質問の例です。
 export const SURVEY = [
   {
     id: 'q1',
     order: 1,
     text: '初デートの食事代は？',
     theme: 'デートとお金の話',
+    defuseHints: ['友達と飲みに行ったら、お会計ってどうしてる？', '後輩とごはんに行ったら、お金はどうする？'],
     betPrompt: '{name}さんの初デートの食事代はどっち派？',
     options: {
       A: {
@@ -34,6 +36,7 @@ export const SURVEY = [
     order: 2,
     text: '恋人のスマホ、見る？',
     theme: '恋人との信頼関係',
+    defuseHints: ['恋人が置きっぱなしのスマホに通知が来たらどうする？', '恋人に一番求めることは？'],
     betPrompt: '{name}さんは恋人のスマホ、どうする派？',
     options: {
       A: {
@@ -59,6 +62,7 @@ export const SURVEY = [
     order: 3,
     text: '休日の予定は？',
     theme: '休日の過ごし方',
+    defuseHints: ['この前の休み、どこで過ごしてた？', '予定のない休日の朝って何してる？'],
     betPrompt: '{name}さんの休日はどっち派？',
     options: {
       A: {
@@ -86,6 +90,7 @@ export const SURVEY = [
     order: 4,
     text: '学生時代の立ち位置は？',
     theme: '学生時代の思い出',
+    defuseHints: ['学生時代、放課後は何してた？', '文化祭のとき、どんなポジションだった？'],
     betPrompt: '{name}さんの学生時代の立ち位置はどっち？',
     options: {
       A: {
@@ -113,6 +118,7 @@ export const SURVEY = [
     order: 5,
     text: '恋人との連絡頻度は？',
     theme: '連絡のとり方',
+    defuseHints: ['LINEの通知が来たら、どれくらいで返す？', '寝る前に恋人に送るメッセージといえば？'],
     betPrompt: '{name}さんの恋人との連絡はどっち派？',
     options: {
       A: {
