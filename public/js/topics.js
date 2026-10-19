@@ -126,9 +126,11 @@ export async function pickAnonymousQuestion(usedRefs = []) {
 // 回答済みのアンケートから選び、足りない分は直感2択クイズで補う（クイズは本人がその場で答える）。
 //   codes … 相手の画面に出す問題（答えは含まない）。お題をそのまま聞くのは禁止なので、遠回しな質問の例（examples）も付ける
 //   keys  … アンケートから決まった答え。クイズの分は null（本人の回答待ち）
-export function pickDefuseCode(player, digits) {
+//   exclude … 使わない問題の ref（相手の解除コードと同じ問題が出ないようにする）
+export function pickDefuseCode(player, digits, exclude = []) {
   const survey = player?.survey || {};
-  const fromSurvey = shuffle(answeredQuestions(player)).slice(0, digits).map((q) => ({
+  const surveyPool = answeredQuestions(player).filter((q) => !exclude.includes(`survey:${q.id}`));
+  const fromSurvey = shuffle(surveyPool).slice(0, digits).map((q) => ({
     code: {
       ref: `survey:${q.id}`,
       source: 'survey',
@@ -140,7 +142,8 @@ export function pickDefuseCode(player, digits) {
     },
     key: survey[q.id],
   }));
-  const fromQuiz = shuffle(QUIZ).slice(0, digits - fromSurvey.length).map((z) => ({
+  const quizPool = QUIZ.filter((z) => !exclude.includes(`quiz:${z.id}`));
+  const fromQuiz = shuffle(quizPool).slice(0, digits - fromSurvey.length).map((z) => ({
     code: {
       ref: `quiz:${z.id}`,
       source: 'quiz',
