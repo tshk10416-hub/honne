@@ -4,7 +4,7 @@
 //   bet.html?room=<roomId>   複数人（3〜6人）：ホストがロビーで「ステータス・ベット」を選んだとき
 //
 // 全員1,000コインから。開始画面で全員が「準備OK」を押したらスタート。1ターンの流れ：
-//   お題提示（全員が「始める」を押すまで）→ 尋問タイム（60秒）→ ベット（15秒）
+//   お題提示（全員が「始める」を押すまで）→ 尋問タイム（60秒）→ ベット（答えと全員の賭けがそろうまで）
 //   → ショーダウン（当たり外れを見て「次のラウンドへ」を押すまで）
 //   1対1  … 全3ラウンド。毎ラウンド2人ともお題が出て、お互いに相手のお題に賭ける。
 //   複数人 … 主役が1人ずつ交代（全員が1回ずつ主役）。主役以外の全員が、主役の答えに賭ける。
@@ -41,7 +41,7 @@ const PHASE_NAMES = {
 };
 // 時間制限のあるフェーズの秒数（お題提示とショーダウンは、ボタンを押すまで待つ）
 const DURATION = {
-  talk: 60, bet: 15,
+  talk: 60,
 };
 const START_KEY = 'start'; // 開始画面の「準備OK」の記録に使うキー
 const STANCE_MS = 3000; // こっそり選ぶ制限時間
@@ -281,12 +281,22 @@ function myBettorInfo(G, t) {
   return bettorsOf(G, t).find((b) => b.bettor === state.uid) || null;
 }
 
-// ベットの締切を待たずにショーダウンへ進めるか（賭けられる人が全員賭けた）
+// ショーダウンへ進めるか①：主役（1対1はお互い）の答えがそろった（抜けた人は待たない）
+function answersIn(G, t) {
+  const key = tKey(t);
+  const turn = G.turns[key];
+  if (!turn) return false;
+  return turn.targets
+    .filter((id) => G.members.includes(id))
+    .every((id) => KEYS.includes(G.answers[key]?.[id]));
+}
+
+// ショーダウンへ進めるか②：賭けられる人（コインが残っていて、抜けていない人）が全員賭けた
 function allBet(G, t) {
   const { before } = ledger(G);
   const key = tKey(t);
   return bettorsOf(G, t)
-    .filter(({ bettor }) => (before[bettor] ?? 0) > 0)
+    .filter(({ bettor }) => G.members.includes(bettor) && (before[bettor] ?? 0) > 0)
     .every(({ bettor }) => !!G.bets[key]?.[bettor]);
 }
 
@@ -490,7 +500,7 @@ function drive(G, now) {
     act(k, () => advancePhase(t, 'setup', 'talk'));
   } else if (G.phase === 'talk' && elapsed >= DURATION.talk * 1000) {
     act(k, () => advancePhase(t, 'talk', 'bet'));
-  } else if (G.phase === 'bet' && (elapsed >= DURATION.bet * 1000 || allBet(G, t))) {
+  } else if (G.phase === 'bet' && answersIn(G, t) && allBet(G, t)) {
     act(k, () => advancePhase(t, 'bet', 'showdown'));
   }
 }
@@ -767,7 +777,7 @@ function renderBet(G, turn, book) {
       setText($('#bet-placed-title'), '見学');
       setText($('#bet-placed-detail'), 'コインがないので、このラウンドは賭けられません');
     }
-    const waiting = bettorsOf(G, t).filter(({ bettor }) => !G.bets[key]?.[bettor] && (book.before[bettor] ?? 0) > 0);
+    const waiting = bettorsOf(G, t).filter(({ bettor }) => G.members.includes(bettor) && !G.bets[key]?.[bettor] && (book.before[bettor] ?? 0) > 0);
     setText($('#bet-placed-wait'), waiting.length ? 'ほかの人のBETを待っています' : 'まもなくショーダウン');
     return;
   }
@@ -1153,7 +1163,12 @@ const bot = {
     // 開始画面・お題提示の準備OKは、すぐに押す
     const readyKey = G.turnIndex < 0 ? START_KEY : G.phase === 'setup' ? tKey(G.turnIndex) : null;
     if (readyKey) {
-      G.playerIds.filter((id) => G.players[id]?.isDummy && !G.ready[readyKey]?.[id]).forEach((id) => {
+      const pendingStance = (id) => {
+        const k = tKey(G.turnIndex);
+        return readyKey === k && !!G.turns[k]?.needsStance?.[id] && !G.answers[k]?.[id];
+      };
+      // こっそり選ぶお題が残っているあいだは、人と同じく準備OKを押さない
+      G.playerIds.filter((id) => G.players[id]?.isDummy && !G.ready[readyKey]?.[id] && !pendingStance(id)).forEach((id) => {
         act(`bot-ready:${G.gameId}:${readyKey}:${id}`, () => setReady(id, readyKey));
       });
     }
@@ -1165,7 +1180,7 @@ const bot = {
     const elapsed = now - G.phaseAt;
     G.playerIds.filter((id) => G.players[id]?.isDummy).forEach((id) => {
       // 主役で答えがないお題：すぐにこっそり選ぶ
-      if (G.phase === 'setup' && elapsed > 1500 && turn.targets.includes(id)
+      if ((G.phase === 'setup' || G.phase === 'talk') && turn.targets.includes(id)
         && turn.needsStance?.[id] && !G.answers[key]?.[id]) {
         act(`bot-stance:${G.gameId}:${key}:${id}`, () => setStance(id, t, KEYS[Math.floor(Math.random() * 2)]));
       }
