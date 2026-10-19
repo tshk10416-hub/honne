@@ -7,6 +7,53 @@ let presetCache = null;
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+// 似た内容のお題のグループ。アンケート・直感クイズ・プリセットは別々の問題でも、
+// 同じグループなら画面では「同じお題」に見える（例：アンケートの「恋人との連絡頻度」とクイズの「連絡の手段」）。
+// 2人の解除コードや、同じゲームのベットのお題は、ref ではなくこのグループで重ならないようにする。
+const TOPIC_GROUPS = {
+  'survey:q1': 'money',
+  'survey:q2': 'lover-phone',
+  'survey:q3': 'holiday',
+  'survey:q4': 'school',
+  'survey:q5': 'contact',
+  'quiz:z01': 'egg',
+  'quiz:z02': 'sweets',
+  'quiz:z03': 'pet',
+  'quiz:z04': 'morning',
+  'quiz:z05': 'season',
+  'quiz:z06': 'travel',
+  'quiz:z07': 'curry',
+  'quiz:z08': 'ramen',
+  'quiz:z09': 'karaage',
+  'quiz:z10': 'food-order',
+  'quiz:z11': 'movie',
+  'quiz:z12': 'travel',
+  'quiz:z13': 'morning',
+  'quiz:z14': 'bath',
+  'quiz:z15': 'contact',
+  'quiz:z16': 'sweets',
+  'preset:b01': 'morning',
+  'preset:b02': 'pet',
+  'preset:b03': 'travel',
+  'preset:b04': 'travel',
+  'preset:b05': 'movie',
+  'preset:b06': 'food-order',
+  'preset:b07': 'surprise',
+  'preset:b08': 'contact',
+  'preset:b09': 'season',
+  'preset:b10': 'food-amount',
+  'preset:b11': 'holiday',
+  'preset:b12': 'confess',
+  'preset:b13': 'punctual',
+  'preset:b14': 'money',
+  'preset:b15': 'photo',
+};
+
+// お題のグループ（表にないお題は、その問題だけで1グループ）
+export function topicGroup(ref) {
+  return TOPIC_GROUPS[ref] || ref;
+}
+
 export async function loadPresets() {
   if (presetCache) return presetCache;
   const res = await fetch(new URL('../data/presets.json', import.meta.url));
@@ -15,14 +62,18 @@ export async function loadPresets() {
   return presetCache;
 }
 
-// 条件に合うプリセットを1つ抽選。出題済み（excludeRefs）を避け、尽きたら重複を許す。
+// 条件に合うプリセットを1つ抽選。出題済み（excludeRefs）と同じグループのお題を避け、
+// 尽きたら出題済みでない問題、それも尽きたら重複を許す。
 export async function pickPreset({ type, mode, minSpicy = 1, excludeRefs = [] } = {}) {
   const all = await loadPresets();
   let pool = all.filter((t) => (!type || t.type === type)
     && (!mode || t.modes.includes(mode))
     && t.spicy >= minSpicy);
+  const blocked = new Set(excludeRefs.map(topicGroup));
+  const freshGroup = pool.filter((t) => !blocked.has(topicGroup(`preset:${t.id}`)));
   const fresh = pool.filter((t) => !excludeRefs.includes(`preset:${t.id}`));
-  if (fresh.length) pool = fresh;
+  if (freshGroup.length) pool = freshGroup;
+  else if (fresh.length) pool = fresh;
   return pool.length ? pick(pool) : null;
 }
 
@@ -80,10 +131,12 @@ function pickFresh(candidates, exclude) {
 // ステータス・ベット：主役の回答済みの問いから出題。なければプリセット＋主役の即決（needsStance）。
 // 主役の答え（answer）も返す。アンケートの回答と同じく、画面には出さないだけの扱い。
 // hints は尋問タイムに出す、揺さぶりの質問の例（お題をそのまま聞かずに答えを探るためのもの）。
-// usedRefs … このゲームで出題済みの問い（同じ問いを続けて出さない）
+// usedRefs … このゲームで出題済みの問い（ほかの人の分も含む）。これと同じグループのお題は出さない。
+//   アンケートの問いがすべて使用済みなら、プリセットのお題（主役がその場でこっそり答える）になる。
 export async function pickBetQuestion(protagonist, usedRefs = []) {
   const name = protagonist?.nickname || '主役';
-  const fresh = answeredQuestions(protagonist).filter((q) => !usedRefs.includes(`survey:${q.id}`));
+  const blocked = new Set(usedRefs.map(topicGroup));
+  const fresh = answeredQuestions(protagonist).filter((q) => !blocked.has(topicGroup(`survey:${q.id}`)));
   if (fresh.length) {
     const q = pick(fresh);
     return {
@@ -131,10 +184,23 @@ export async function pickAnonymousQuestion(usedRefs = []) {
 //   codes … 相手の画面に出す問題（答えは含まない）。お題をそのまま聞くのは禁止なので、遠回しな質問の例（examples）も付ける
 //   keys  … アンケートから決まった答え。クイズの分は null（本人の回答待ち）
 //   exclude … 使わない問題の ref（相手の解除コードと同じ問題が出ないようにする）
+//   同じグループのお題（例：アンケートの連絡頻度とクイズの連絡手段）も避け、自分のコードの中でも重ねない
 export function pickDefuseCode(player, digits, exclude = []) {
   const survey = player?.survey || {};
-  const surveyPool = answeredQuestions(player).filter((q) => !exclude.includes(`survey:${q.id}`));
-  const fromSurvey = shuffle(surveyPool).slice(0, digits).map((q) => ({
+  const blocked = new Set(exclude.map(topicGroup));
+  // 同じグループを1つまでにして、順に選ぶ
+  const takeFresh = (items, refOf, max) => {
+    const out = [];
+    items.forEach((item) => {
+      const group = topicGroup(refOf(item));
+      if (out.length >= max || blocked.has(group)) return;
+      blocked.add(group);
+      out.push(item);
+    });
+    return out;
+  };
+  const surveyPool = takeFresh(shuffle(answeredQuestions(player)), (q) => `survey:${q.id}`, digits);
+  const fromSurvey = surveyPool.map((q) => ({
     code: {
       ref: `survey:${q.id}`,
       source: 'survey',
@@ -146,8 +212,8 @@ export function pickDefuseCode(player, digits, exclude = []) {
     },
     key: survey[q.id],
   }));
-  const quizPool = QUIZ.filter((z) => !exclude.includes(`quiz:${z.id}`));
-  const fromQuiz = shuffle(quizPool).slice(0, digits - fromSurvey.length).map((z) => ({
+  const quizPool = takeFresh(shuffle(QUIZ), (z) => `quiz:${z.id}`, digits - fromSurvey.length);
+  const fromQuiz = quizPool.map((z) => ({
     code: {
       ref: `quiz:${z.id}`,
       source: 'quiz',
